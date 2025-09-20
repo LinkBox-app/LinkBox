@@ -49,15 +49,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
     }
   };
 
-  // 自动填入测试账号
-  const fillTestAccount = () => {
-    setFormData({
-      username: 'advx2025',
-      password: 'advx2025',
-      confirmPassword: '',
-    });
-    setErrors({});
-  };
 
   const backdropVariants: Variants = {
     hidden: { opacity: 0 },
@@ -349,42 +340,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
             )}
           </motion.button>
         </form>
-
-        {/* 测试账号按钮 - 仅在登录模式显示 */}
-        {mode === 'login' && (
-          <div className="mt-3 sm:mt-4 text-center">
-            <motion.button
-              type="button"
-              onClick={fillTestAccount}
-              disabled={isLoading}
-              className="text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed inline-block px-2 sm:px-3 py-2 border-2 border-solid min-h-[40px] flex items-center justify-center mx-auto"
-              style={{ 
-                color: 'rgba(255, 111, 46, 1)',
-                backgroundColor: 'rgba(255, 248, 232, 1)',
-                borderColor: 'rgba(255, 111, 46, 1)',
-                fontFamily: '"Menlo", "Consolas", "Courier_New", "Hannotate_SC", "DengXian", monospace',
-                boxShadow: '2px 2px 0px rgba(255, 111, 46, 1)'
-              }}
-              whileHover={{ 
-                x: -1,
-                y: -1,
-                boxShadow: '3px 3px 0px rgba(255, 111, 46, 1)',
-                scale: 1.05
-              }}
-              whileTap={{ 
-                x: 1,
-                y: 1,
-                boxShadow: '1px 1px 0px rgba(255, 111, 46, 1)',
-                scale: 0.95
-              }}
-            >
-              🚀 点击自动填入 advx 测试账号
-            </motion.button>
-            <p className="text-xs mt-1 sm:mt-2 opacity-60" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-              黑客松评委专用测试账号
-            </p>
-          </div>
-        )}
 
         {/* 模式切换 */}
         <div className="mt-4 sm:mt-6 text-center">

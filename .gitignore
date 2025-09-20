@@ -7,3 +7,4 @@ docs
 **/*.pyc
 **/.env
 
+pnpm-lock.yaml

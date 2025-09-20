@@ -83,7 +83,7 @@ app.include_router(ai_router)
 @app.get("/")
 async def root():
     """根路径"""
-    return {"message": "SearchFav API 正在运行"}
+    return {"message": "Linkbox API 正在运行"}
 
 
 @app.get("/health")
