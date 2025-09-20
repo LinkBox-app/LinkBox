@@ -1,3 +1,10 @@
+<div align="center">
+  <img src="./misc/img/logo.png", width="200">
+</div>
+
+-----
+[English Version](README.en.md)
+
 # LinkBox 📦
 
 一个基于 AI 的智能链接收藏夹应用，让网页资源管理变得更智能、更高效。
