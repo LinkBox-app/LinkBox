@@ -1,18 +1,25 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence, type Variants, type AnimationGeneratorType } from 'framer-motion';
-import { createResource, createResourcePreview } from '../api/methods/resource.methods';
+import { createResource } from '../api/methods/resource.methods';
+import { createResourcePreviewAsync } from '../api/methods/resource.async.methods';
 import type {
     ResourceCreateRequest,
     ResourcePreviewRequest
 } from '../api/types/resource.types';
 import toast from '../utils/toast';
 import LoadingDots from './LoadingDots';
+import { useProgress } from '../contexts/ProgressContext';
 
 interface BookmarkModalProps {
   isOpen: boolean;
   url: string;
   onClose: () => void;
   onSuccess: () => void;
+  initialData?: {
+    title: string;
+    digest: string;
+    tags: string[];
+  };
 }
 
 type ModalStep = 'note' | 'preview' | 'edit';
@@ -21,17 +28,21 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
   isOpen, 
   url, 
   onClose, 
-  onSuccess 
+  onSuccess,
+  initialData
 }) => {
-  const [step, setStep] = useState<ModalStep>('note');
+  const [step, setStep] = useState<ModalStep>(initialData ? 'edit' : 'note');
   const [isLoading, setIsLoading] = useState(false);
   const [note, setNote] = useState('');
   const [editData, setEditData] = useState({
-    title: '',
-    digest: '',
-    tags: [] as string[],
+    title: initialData?.title || '',
+    digest: initialData?.digest || '',
+    tags: initialData?.tags || [] as string[],
   });
   const [tagInput, setTagInput] = useState('');
+  const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
+  
+  const { addTask, updateTask, getTask } = useProgress();
 
   // 动画变体
   const modalVariants: Variants = {
@@ -73,6 +84,7 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
     setNote('');
     setEditData({ title: '', digest: '', tags: [] });
     setTagInput('');
+    setCurrentTaskId(null);
   };
 
   const handleClose = () => {
@@ -86,7 +98,16 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
       return;
     }
 
-    setIsLoading(true);
+    // 创建进度任务
+    const taskId = addTask({
+      title: '生成网页预览',
+      url: url,
+      status: 'pending',
+      progress: 0,
+      message: '准备开始抓取...'
+    });
+    
+    setCurrentTaskId(taskId);
     
     try {
       const request: ResourcePreviewRequest = {
@@ -94,18 +115,47 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
         note: note,
       };
       
-      const preview = await createResourcePreview(request);
+      // 使用异步预览生成
+      const preview = await createResourcePreviewAsync(request, (progress) => {
+        updateTask(taskId, {
+          status: progress.step,
+          progress: progress.progress,
+          message: progress.message,
+          error: progress.error
+        });
+      });
+      
       setEditData({
         title: preview.title,
         digest: preview.digest,
         tags: preview.tags,
       });
-      setStep('edit');
+      
+      // 关闭模态框并跳转到编辑步骤
+      handleClose();
+      
+      // 显示成功消息
+      toast.success('预览生成完成，请在右下角查看结果');
+      
+      // 标记任务完成，并存储结果
+      updateTask(taskId, {
+        status: 'completed',
+        progress: 100,
+        message: '预览生成完成',
+        result: preview
+      });
+      
     } catch (error: any) {
       console.error('生成预览失败:', error);
       toast.error(error.message || '生成预览失败，请重试');
-    } finally {
-      setIsLoading(false);
+      
+      // 标记任务失败
+      updateTask(taskId, {
+        status: 'error',
+        progress: 0,
+        message: '生成失败',
+        error: error.message || '生成预览失败'
+      });
     }
   };
 

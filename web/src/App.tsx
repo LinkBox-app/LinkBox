@@ -1,10 +1,13 @@
 import { ToastProvider } from './components/Toast';
 import Layout from './components/Layout';
+import { ProgressProvider } from './contexts/ProgressContext';
 
 function App() {
   return (
     <ToastProvider>
-      <Layout />
+      <ProgressProvider>
+        <Layout />
+      </ProgressProvider>
     </ToastProvider>
   );
 }

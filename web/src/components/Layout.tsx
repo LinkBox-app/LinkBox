@@ -1,9 +1,36 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import IconSvg from '../images/icon.svg';
+import ProgressFloatingWindow from './ProgressFloatingWindow';
+import BookmarkModal from './BookmarkModal';
+import { useProgress } from '../contexts/ProgressContext';
+import toast from '../utils/toast';
 
 const Layout: React.FC = () => {
   const location = useLocation();
+  const { tasks, removeTask, clearCompleted } = useProgress();
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editModalData, setEditModalData] = useState<{
+    url: string;
+    previewData: any;
+  } | null>(null);
+
+  const handlePreviewComplete = (previewData: any, url: string) => {
+    setEditModalData({ url, previewData });
+    setShowEditModal(true);
+    toast.success('点击完成预览，可以编辑收藏信息');
+  };
+
+  const handleEditModalClose = () => {
+    setShowEditModal(false);
+    setEditModalData(null);
+  };
+
+  const handleEditModalSuccess = () => {
+    setShowEditModal(false);
+    setEditModalData(null);
+    // 这里可以添加刷新页面或其他成功处理逻辑
+  };
 
   return (
     <div className="w-full min-h-screen flex flex-col" 
@@ -77,6 +104,25 @@ const Layout: React.FC = () => {
       <main className="flex-1 flex flex-col">
         <Outlet />
       </main>
+      
+      {/* 进度悬浮窗 */}
+      <ProgressFloatingWindow
+        tasks={tasks}
+        onTaskRemove={removeTask}
+        onClearCompleted={clearCompleted}
+        onPreviewComplete={handlePreviewComplete}
+      />
+      
+      {/* 编辑模态框 */}
+      {showEditModal && editModalData && (
+        <BookmarkModal
+          isOpen={showEditModal}
+          url={editModalData.url}
+          onClose={handleEditModalClose}
+          onSuccess={handleEditModalSuccess}
+          initialData={editModalData.previewData}
+        />
+      )}
     </div>
   );
 };
