@@ -1,0 +1,46 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "7032:7032"
+    environment:
+    # 参考 .env 文件中的配置
+      MYSQL_HOST: db
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: your_root_password
+      MYSQL_DB: linkbox
+      AI_BASE_URL: https://api.openai.com/v1
+      AI_API_KEY: sk-your_openai_api_key
+      AI_MODEL: gpt-4o-mini # 可根据需要更改模型
+      JWT_SECRET_KEY: your_jwt_secret_key
+      JWT_ALGORITHM: HS256
+      JWT_EXPIRE_MINUTES: 1440
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+
+  db:
+    image: mysql:8.0
+    container_name: linkbox_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: your_root_password # Please use a secure password
+      MYSQL_DATABASE: linkbox
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+volumes:
+  db_data:

@@ -14,7 +14,7 @@
 - [x] 收藏时候的异步
 - [] 浏览器插件
 - [] 其他优化
-- [] Docker
+- [x] Docker
 - [] i18n
 
 ## ✨ 特性
@@ -78,7 +78,7 @@
 
 ### 环境要求
 
-- **Node.js**: 18.0+
+- **Node.js**: 22.0+
 - **Python**: 3.13
 - **MySQL**: 5.7+ 或 8.0+
 - **OpenAI API Key** 或兼容 OpenAI 格式的 API
@@ -181,20 +181,24 @@ JWT_EXPIRE_MINUTES=1440
 ```
 LinkBox/
 ├── server/                 # 后端代码
+│   ├── Dockerfile         # 后端 Docker 配置
 │   ├── main.py            # FastAPI 应用入口
 │   ├── models.py          # 数据库模型
 │   ├── routers/           # API 路由
 │   ├── crud/              # 数据库操作
 │   ├── utils/             # 工具函数
 │   └── requirements.txt   # Python 依赖
-├── web/                   # 前端代码
+├── web/                    # 前端代码
+│   ├── Dockerfile         # 前端 Docker 配置
+│   ├── .dockerignore      # Docker 忽略文件
 │   ├── src/
 │   │   ├── pages/         # 页面组件
 │   │   ├── components/    # UI 组件
 │   │   ├── hooks/         # React Hooks
 │   │   └── api/           # API 接口
 │   └── package.json       # Node 依赖
-└── README.md              # 项目文档
+├── docker-compose.yml      # Docker 服务编排
+└── README.md               # 项目文档
 ```
 
 ### 主要功能模块
@@ -223,9 +227,6 @@ cd server
 
 # 开发模式
 python main.py
-
-# 运行测试
-pytest
 
 # 生产部署
 gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:7032

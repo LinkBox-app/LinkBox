@@ -11,7 +11,7 @@ An AI-powered intelligent link bookmark application that makes web resource mana
 - [x] Asynchronous bookmarking
 - [] Browser extension
 - [] Other optimizations
-- [] Docker
+- [x] Docker
 - [] i18n
 
 ## ✨ Features
@@ -178,20 +178,24 @@ Database tables will be automatically created on the first run.
 ```
 LinkBox/
 ├── server/                 # Backend code
+│   ├── Dockerfile         # Backend Docker configuration
 │   ├── main.py            # FastAPI application entry point
 │   ├── models.py          # Database models
 │   ├── routers/           # API routes
 │   ├── crud/              # Database operations
 │   ├── utils/             # Utility functions
 │   └── requirements.txt   # Python dependencies
-├── web/                   # Frontend code
+├── web/                    # Frontend code
+│   ├── Dockerfile         # Frontend Docker configuration
+│   ├── .dockerignore      # Docker ignore file
 │   ├── src/
 │   │   ├── pages/         # Page components
 │   │   ├── components/    # UI components
 │   │   ├── hooks/         # React Hooks
 │   │   └── api/           # API interfaces
 │   └── package.json       # Node dependencies
-└── README.md              # Project documentation
+├── docker-compose.yml      # Docker service orchestration
+└── README.md               # Project documentation
 ```
 
 ### Key Functional Modules
