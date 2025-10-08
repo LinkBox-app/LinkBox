@@ -1,5 +1,5 @@
 import math
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -19,6 +19,64 @@ from schemas.resource_schemas import (
 from utils.auth import get_current_user
 
 router = APIRouter(prefix="/resources", tags=["资源管理"])
+
+
+def _build_resource_list_response(
+    resources_data: List[dict], total: int, page: int, size: int
+) -> ResourceListResponse:
+    """构建资源列表响应"""
+    resources_response: List[ResourceResponse] = []
+    for item in resources_data:
+        resource = item["resource"]
+        tags = item["tags"]
+        resource_dict = {**resource.__dict__, "tags": [tag.name for tag in tags]}
+        resources_response.append(ResourceResponse.model_validate(resource_dict))
+
+    pages = math.ceil(total / size) if total > 0 else 1
+
+    return ResourceListResponse(
+        resources=resources_response, total=total, page=page, size=size, pages=pages
+    )
+
+
+@router.get(
+    "",
+    response_model=ResourceListResponse,
+    summary="获取用户资源列表",
+)
+@router.get(
+    "/",
+    response_model=ResourceListResponse,
+    summary="获取用户资源列表",
+    include_in_schema=False,
+)
+async def list_resources(
+    tag: Optional[str] = None,
+    page: int = 1,
+    size: int = 20,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """按需获取资源列表，未指定标签时返回全部资源"""
+    if page < 1:
+        page = 1
+    if size < 1 or size > 100:
+        size = 20
+
+    try:
+        if tag:
+            resources_data, total = resource_crud.get_resources_by_tag(
+                db, current_user.id, tag, page, size
+            )
+        else:
+            resources_data, total = resource_crud.get_resources_by_user(
+                db, current_user.id, page, size
+            )
+
+        return _build_resource_list_response(resources_data, total, page, size)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取资源失败: {str(e)}")
 
 
 @router.get(
@@ -51,25 +109,7 @@ async def get_resources_by_tag(
             db, current_user.id, tag_name, page, size
         )
 
-        # 构建响应
-        resources_response = []
-        for item in resources_data:
-            resource = item["resource"]
-            tags = item["tags"]
-            # 创建ResourceResponse并添加标签
-            resource_dict = {
-                **resource.__dict__,
-                "tags": [tag.name for tag in tags]
-            }
-            resource_response = ResourceResponse.model_validate(resource_dict)
-            resources_response.append(resource_response)
-
-        # 计算总页数
-        pages = math.ceil(total / size) if total > 0 else 1
-
-        return ResourceListResponse(
-            resources=resources_response, total=total, page=page, size=size, pages=pages
-        )
+        return _build_resource_list_response(resources_data, total, page, size)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"按标签查询失败: {str(e)}")

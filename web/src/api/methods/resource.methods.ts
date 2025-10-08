@@ -10,6 +10,16 @@ import type {
 } from "../types/resource.types";
 
 /**
+ * 获取全部资源
+ * @param page 页码，从1开始
+ * @param size 每页数量，默认20，最大100
+ */
+export const getResources = (page: number = 1, size: number = 20) =>
+  alova.Get<ResourceListResponse>("/resources", {
+    params: { page, size },
+  });
+
+/**
  * 按标签分页查询资源
  * @param tagName 标签名称
  * @param page 页码，从1开始

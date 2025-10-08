@@ -1,7 +1,7 @@
 import { useRequest } from 'alova/client';
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getResourcesByTag } from '../api/methods/resource.methods';
+import { getResources, getResourcesByTag } from '../api/methods/resource.methods';
 import { getUserTags } from '../api/methods/tag.methods';
 import type { ResourceResponse } from '../api/types/resource.types';
 import AuthModal from '../components/AuthModal';
@@ -27,7 +27,7 @@ const Home: React.FC = () => {
   const [bookmarkUrl, setBookmarkUrl] = useState('');
   
   // 标签和资源相关状态
-  const [selectedTag, setSelectedTag] = useState<string>('');
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
   
@@ -47,7 +47,14 @@ const Home: React.FC = () => {
     data: resourcesResponse,
     send: refreshResources
   } = useRequest(
-    (tagName: string, page: number = 1) => getResourcesByTag(tagName, page, 20),
+    (
+      params: { tag?: string | null; page?: number; size?: number } = {}
+    ) => {
+      const { tag, page = 1, size = 20 } = params;
+      return tag
+        ? getResourcesByTag(tag, page, size)
+        : getResources(page, size);
+    },
     { immediate: false, force: true }
   );
   
@@ -86,18 +93,30 @@ const Home: React.FC = () => {
     }
   }, [isAuthenticated]);
 
-  // 选择标签时加载对应资源
+  // 根据标签选择加载资源
   useEffect(() => {
-    if (selectedTag) {
-      setCurrentPage(1);
-      refreshResources(selectedTag, 1);
+    if (!isAuthenticated) {
+      return;
     }
-  }, [selectedTag]);
 
-  // 标签加载成功后的处理
+    setCurrentPage(1);
+
+    if (selectedTag) {
+      refreshResources({ tag: selectedTag, page: 1 });
+    } else {
+      refreshResources({ page: 1 });
+    }
+  }, [isAuthenticated, selectedTag]);
+
+  // 当标签列表变化时，校验当前选择是否仍然存在
   useEffect(() => {
-    if (tags.length > 0 && !selectedTag) {
-      setSelectedTag(tags[0].name);
+    if (!selectedTag) {
+      return;
+    }
+
+    const exists = tags.some((tag) => tag.name === selectedTag);
+    if (!exists) {
+      setSelectedTag(null);
     }
   }, [tags, selectedTag]);
 
@@ -126,9 +145,12 @@ const Home: React.FC = () => {
     
     // 清除 alova 相关缓存，强制重新请求数据
     refreshTags({ force: true }); // 强制重新加载标签，跳过缓存
+    setCurrentPage(1);
+    const options = { force: true };
     if (selectedTag) {
-      setCurrentPage(1);
-      refreshResources(selectedTag, 1, { force: true }); // 强制重新加载当前标签的资源，跳过缓存
+      refreshResources({ tag: selectedTag, page: 1 }, options);
+    } else {
+      refreshResources({ page: 1 }, options);
     }
   };
 
@@ -148,16 +170,23 @@ const Home: React.FC = () => {
     
     // 如果删除的是当前选中的标签，清空选中状态
     if (tagToDelete && selectedTag === tagToDelete.name) {
-      setSelectedTag('');
+      setSelectedTag(null);
     }
     
     setTagToDelete(null);
   };
 
   const handlePageChange = (newPage: number) => {
-    if (selectedTag && newPage >= 1 && newPage <= pagination.pages) {
-      setCurrentPage(newPage);
-      refreshResources(selectedTag, newPage);
+    if (newPage < 1 || newPage > pagination.pages) {
+      return;
+    }
+
+    setCurrentPage(newPage);
+
+    if (selectedTag) {
+      refreshResources({ tag: selectedTag, page: newPage });
+    } else {
+      refreshResources({ page: newPage });
     }
   };
 
@@ -169,7 +198,9 @@ const Home: React.FC = () => {
   const handleEditResourceSuccess = () => {
     // 强制重新加载当前标签的资源
     if (selectedTag) {
-      refreshResources(selectedTag, currentPage);
+      refreshResources({ tag: selectedTag, page: currentPage });
+    } else {
+      refreshResources({ page: currentPage });
     }
     setResourceToEdit(null);
   };
@@ -290,78 +321,116 @@ const Home: React.FC = () => {
               <p className="text-center">暂无标签，收藏您的第一个链接吧！</p>
             </div>
           ) : (
-            <div className="flex flex-wrap gap-2 sm:gap-3">
-              <AnimatePresence>
-                {tags.map((tag) => (
+            <div className="flex flex-col gap-2 sm:gap-3">
+              <div className="flex flex-wrap gap-2 sm:gap-3">
+                <AnimatePresence>
                   <motion.div
-                    key={tag.id}
+                    key="all"
                     layout
                     initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
                     animate={{ opacity: 1, scale: 1, rotate: 0 }}
                     exit={{ opacity: 0, scale: 0.8, rotate: 5 }}
                     whileHover={{ rotate: -2, scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className={`relative group px-3 py-1.5 sm:px-4 sm:py-2 border-2 border-solid font-bold cursor-pointer text-sm sm:text-base ${
-                      selectedTag === tag.name 
-                        ? 'shadow-[3px_3px_0_rgba(19,0,0,1)] sm:shadow-[4px_4px_0_rgba(19,0,0,1)]' 
+                    className={`px-3 py-1.5 sm:px-4 sm:py-2 border-2 border-solid font-bold cursor-pointer text-sm sm:text-base ${
+                      selectedTag === null
+                        ? 'shadow-[3px_3px_0_rgba(19,0,0,1)] sm:shadow-[4px_4px_0_rgba(19,0,0,1)]'
                         : 'shadow-[2px_2px_0_rgba(19,0,0,1)] hover:shadow-[3px_3px_0_rgba(19,0,0,1)] sm:hover:shadow-[4px_4px_0_rgba(19,0,0,1)] hover:translate-x-[-1px] hover:translate-y-[-1px] sm:hover:translate-x-[-2px] sm:hover:translate-y-[-2px]'
                     } transition-all`}
                     style={{
-                      backgroundColor: selectedTag === tag.name ? 'rgba(255, 111, 46, 1)' : 'rgba(255, 248, 232, 1)',
+                      backgroundColor: selectedTag === null ? 'rgba(255, 111, 46, 1)' : 'rgba(255, 248, 232, 1)',
                       borderColor: 'rgba(19, 0, 0, 1)',
                       color: 'rgba(19, 0, 0, 1)',
                     }}
+                    onClick={() => setSelectedTag(null)}
                   >
-                  <button
-                    onClick={() => setSelectedTag(tag.name)}
-                    className="flex-1 text-left"
-                  >
-                    #{tag.name}
-                  </button>
-                  
-                  {/* 删除按钮 */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteTag(tag.id, tag.name);
-                    }}
-                    className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 flex items-center justify-center"
-                    style={{
-                      backgroundColor: 'rgba(239, 68, 68, 1)',
-                      color: 'rgba(255, 255, 255, 1)',
-                    }}
-                    title={`删除标签 ${tag.name}`}
-                  >
-                    ×
-                  </button>
+                    全部资源
                   </motion.div>
-                ))}
-              </AnimatePresence>
-              
-              {/* 创建标签按钮 */}
-              <motion.button
-                onClick={() => setShowCreateTagModal(true)}
-                className="px-3 py-1.5 sm:px-4 sm:py-2 border-2 border-dashed font-bold hover:border-solid shadow-[2px_2px_0_rgba(19,0,0,0.3)] hover:shadow-[3px_3px_0_rgba(19,0,0,0.5)] hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all text-sm sm:text-base"
-                style={{
-                  backgroundColor: 'rgba(255, 248, 232, 0.5)',
-                  borderColor: 'rgba(19, 0, 0, 0.5)',
-                  color: 'rgba(19, 0, 0, 0.7)',
-                }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                + 新建
-              </motion.button>
+
+                  {tags.map((tag) => (
+                    <motion.div
+                      key={tag.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
+                      animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                      exit={{ opacity: 0, scale: 0.8, rotate: 5 }}
+                      whileHover={{ rotate: -2, scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className={`relative group px-3 py-1.5 sm:px-4 sm:py-2 border-2 border-solid font-bold cursor-pointer text-sm sm:text-base ${
+                        selectedTag === tag.name
+                          ? 'shadow-[3px_3px_0_rgba(19,0,0,1)] sm:shadow-[4px_4px_0_rgba(19,0,0,1)]'
+                          : 'shadow-[2px_2px_0_rgba(19,0,0,1)] hover:shadow-[3px_3px_0_rgba(19,0,0,1)] sm:hover:shadow-[4px_4px_0_rgba(19,0,0,1)] hover:translate-x-[-1px] hover:translate-y-[-1px] sm:hover:translate-x-[-2px] sm:hover:translate-y-[-2px]'
+                      } transition-all`}
+                      style={{
+                        backgroundColor: selectedTag === tag.name ? 'rgba(255, 111, 46, 1)' : 'rgba(255, 248, 232, 1)',
+                        borderColor: 'rgba(19, 0, 0, 1)',
+                        color: 'rgba(19, 0, 0, 1)',
+                      }}
+                    >
+                      <button
+                        onClick={() => setSelectedTag(tag.name)}
+                        className="flex-1 text-left"
+                      >
+                        #{tag.name}
+                      </button>
+
+                      {/* 删除按钮 */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteTag(tag.id, tag.name);
+                        }}
+                        className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 flex items-center justify-center"
+                        style={{
+                          backgroundColor: 'rgba(239, 68, 68, 1)',
+                          color: 'rgba(255, 255, 255, 1)',
+                        }}
+                        title={`删除标签 ${tag.name}`}
+                      >
+                        ×
+                      </button>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+
+                {/* 创建标签按钮 */}
+                <motion.button
+                  onClick={() => setShowCreateTagModal(true)}
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 border-2 border-dashed font-bold hover:border-solid shadow-[2px_2px_0_rgba(19,0,0,0.3)] hover:shadow-[3px_3px_0_rgba(19,0,0,0.5)] hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all text-sm sm:text-base"
+                  style={{
+                    backgroundColor: 'rgba(255, 248, 232, 0.5)',
+                    borderColor: 'rgba(19, 0, 0, 0.5)',
+                    color: 'rgba(19, 0, 0, 0.7)',
+                  }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  + 新建
+                </motion.button>
+              </div>
+
+              {tags.length === 0 && (
+                <div 
+                  className="p-4 border-2 border-solid transform rotate-[-0.3deg]"
+                  style={{
+                    backgroundColor: 'rgba(255, 248, 232, 1)',
+                    borderColor: 'rgba(19, 0, 0, 1)',
+                    color: 'rgba(19, 0, 0, 1)',
+                  }}
+                >
+                  <p className="text-center">暂无标签，收藏您的第一个链接吧！</p>
+                </div>
+              )}
             </div>
           )}
         </div>
 
         {/* 资源列表 */}
-        {selectedTag && (
-          <div>
+        {isAuthenticated && (
+        <div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 sm:mb-4 gap-2 sm:gap-0">
               <h3 className="text-base sm:text-lg font-bold" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-                #{selectedTag} 资源
+                {selectedTag ? `#${selectedTag} 资源` : '全部资源'}
               </h3>
               <span className="text-xs sm:text-sm opacity-70" style={{ color: 'rgba(19, 0, 0, 1)' }}>
                 共 {pagination.total} 个资源
@@ -381,7 +450,7 @@ const Home: React.FC = () => {
                   color: 'rgba(19, 0, 0, 1)',
                 }}
               >
-                <p>该标签下暂无资源</p>
+                <p>{selectedTag ? '该标签下暂无资源' : '暂无收藏资源，先去收藏一些吧！'}</p>
               </div>
             ) : (
               <>

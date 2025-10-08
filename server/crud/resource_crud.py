@@ -230,6 +230,29 @@ def get_resources_by_tag(
     return results, total
 
 
+def get_resources_by_user(
+    db: Session, user_id: int, page: int = 1, size: int = 20
+) -> Tuple[List[dict], int]:
+    """按用户获取全部资源"""
+    offset = (page - 1) * size
+
+    base_query = (
+        db.query(Resource)
+        .filter(Resource.user_id == user_id, Resource.is_deleted == False)
+        .order_by(Resource.created_at.desc())
+    )
+
+    total = base_query.count()
+    resources = base_query.offset(offset).limit(size).all()
+
+    results: List[dict] = []
+    for resource in resources:
+        tags = get_tags_by_resource(db, resource.id, user_id)
+        results.append({"resource": resource, "tags": tags})
+
+    return results, total
+
+
 def search_resources_multi_dimensional(
     db: Session, query: str, user_id: int, page: int = 1, size: int = 20
 ) -> Tuple[List[dict], int]:
