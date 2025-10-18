@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkBox 插件设置</title>
+    <link rel="stylesheet" href="options.css">
+  </head>
+  <body>
+    <main class="container">
+      <h1>LinkBox 插件设置</h1>
+
+      <section id="status" class="message hidden"></section>
+
+      <section class="card">
+        <div class="field">
+          <label for="base-url">服务端地址</label>
+          <input id="base-url" type="url" placeholder="例如：https://linkbox.example.com" required />
+          <p class="hint">
+            默认地址为 <code>http://localhost:7032</code>。请确保地址包含协议（http/https），无需填写结尾斜杠。
+          </p>
+        </div>
+
+        <div class="actions">
+          <button id="save-button" type="button" class="primary">保存</button>
+          <button id="test-button" type="button" class="secondary">测试连接</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>数据管理</h2>
+        <p class="hint">如果需要清除当前浏览器中的登录状态，可点击下方按钮。</p>
+        <button id="clear-auth" type="button" class="danger">清除登录信息</button>
+      </section>
+    </main>
+
+    <script src="options.js"></script>
+  </body>
+</html>

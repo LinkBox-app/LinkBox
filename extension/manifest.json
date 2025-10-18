@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "LinkBox Collector",
+  "description": "快速将浏览器中的页面保存到 LinkBox。",
+  "version": "0.1.0",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "保存到 LinkBox"
+  },
+  "options_page": "options.html",
+  "permissions": ["storage", "tabs", "activeTab"],
+  "host_permissions": ["<all_urls>"]
+}
