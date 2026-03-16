@@ -40,9 +40,8 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
     tags: initialData?.tags || [] as string[],
   });
   const [tagInput, setTagInput] = useState('');
-  const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
   
-  const { addTask, updateTask, getTask } = useProgress();
+  const { addTask, updateTask } = useProgress();
 
   // 动画变体
   const modalVariants: Variants = {
@@ -84,7 +83,6 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
     setNote('');
     setEditData({ title: '', digest: '', tags: [] });
     setTagInput('');
-    setCurrentTaskId(null);
   };
 
   const handleClose = () => {
@@ -106,8 +104,6 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
       progress: 0,
       message: '准备开始抓取...'
     });
-    
-    setCurrentTaskId(taskId);
     
     try {
       const request: ResourcePreviewRequest = {

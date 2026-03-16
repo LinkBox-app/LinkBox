@@ -263,6 +263,24 @@ export const useAgentStream = (): UseAgentStreamReturn => {
             console.error("解析剩余SSE数据失败:", e);
           }
         }
+      } catch (error: any) {
+        const isAborted =
+          controller.signal.aborted || error?.name === "AbortError";
+
+        setState((prev) => ({
+          ...prev,
+          isStreaming: false,
+          error: isAborted
+            ? null
+            : error?.message || "AI 对话请求失败，请稍后重试",
+        }));
+
+        // 用户主动取消不作为错误抛出，避免上层弹出失败提示。
+        if (isAborted) {
+          return;
+        }
+
+        throw error;
       } finally {
         setAbortController(null);
         // 注意：这里不再设置 isStreaming = false，因为 done 事件已经处理了

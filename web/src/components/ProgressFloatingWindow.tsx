@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import LoadingDots from './LoadingDots';
 
 export interface ProgressTask {
   id: string;
