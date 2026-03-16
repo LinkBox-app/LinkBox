@@ -216,7 +216,13 @@ async def create_resource_preview(
         user_tag_names = [tag.name for tag in user_tags]
         
         # 使用AI生成摘要，并传递用户已有标签
-        summary = generate_resource_summary(web_content, request.note, user_tag_names)
+        summary = generate_resource_summary(
+            db=db,
+            user_id=current_user.id,
+            web_content=web_content,
+            user_note=request.note,
+            user_tags=user_tag_names,
+        )
         
         return ResourcePreviewResponse(
             title=summary.title,

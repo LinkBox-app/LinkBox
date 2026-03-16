@@ -1,22 +1,30 @@
-from fastapi import Depends, HTTPException
+from typing import Optional
+
+from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-from typing import Optional
+
+from config import settings
+from crud.user_crud import ensure_single_user
 from database import get_db
 from models import User
-from utils.jwt_utils import verify_token, get_user_id_from_token
+from utils.jwt_utils import verify_token
 from errors import AuthenticationError, AuthorizationError
 
-# 创建 HTTPBearer 实例，用于从 Authorization header 提取 Bearer token
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db)
 ) -> User:
     """获取当前认证用户"""
-    
+    if settings.SINGLE_USER_MODE:
+        return ensure_single_user(db)
+
+    if not credentials:
+        raise AuthenticationError("缺少认证信息")
+
     # 提取 token
     token = credentials.credentials
     
@@ -47,7 +55,9 @@ def get_current_user_optional(
     db: Session = Depends(get_db)
 ) -> Optional[User]:
     """获取当前用户（可选认证，用于某些可以匿名访问的接口）"""
-    
+    if settings.SINGLE_USER_MODE:
+        return ensure_single_user(db)
+
     if not credentials:
         return None
     

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence, type Variants, type AnimationGeneratorType } from 'framer-motion';
-import { updateResource } from '../api/methods/resource.methods';
 import type { ResourceResponse, ResourceUpdate } from '../api/types/resource.types';
+import { useResources } from '../contexts/ResourceContext';
 import toast from '../utils/toast';
 import LoadingDots from './LoadingDots';
 
@@ -19,12 +19,22 @@ const EditResourceModal: React.FC<EditResourceModalProps> = ({
   onSuccess,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const { updateBookmark } = useResources();
   const [editData, setEditData] = useState({
     title: resource.title,
     digest: resource.digest,
     tags: resource.tags || [],
   });
   const [tagInput, setTagInput] = useState('');
+
+  useEffect(() => {
+    setEditData({
+      title: resource.title,
+      digest: resource.digest,
+      tags: resource.tags || [],
+    });
+    setTagInput('');
+  }, [resource]);
 
   // 动画变体
   const modalVariants: Variants = {
@@ -115,7 +125,7 @@ const EditResourceModal: React.FC<EditResourceModalProps> = ({
         tags: editData.tags,
       };
 
-      await updateResource(resource.id, updateData);
+      await updateBookmark(resource.id, updateData);
       toast.success('资源更新成功！');
       handleClose();
       onSuccess();

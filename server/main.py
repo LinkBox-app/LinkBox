@@ -6,7 +6,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 
-from database import create_tables
+from config import settings
+from crud.user_crud import ensure_single_user
+from database import SessionLocal, create_tables
 
 # 导入全局异常处理
 from errors import (
@@ -21,6 +23,7 @@ from errors import (
 )
 from routers.ai_router import router as ai_router
 from routers.resource_router import router as resource_router
+from routers.settings_router import router as settings_router
 from routers.tag_router import router as tag_router
 
 # 导入路由
@@ -40,6 +43,11 @@ async def lifespan(app: FastAPI):
         # 创建数据库表
         create_tables()
         logger.info("数据库表创建成功")
+
+        if settings.SINGLE_USER_MODE:
+            with SessionLocal() as db:
+                default_user = ensure_single_user(db)
+                logger.info("单用户模式已加载用户: %s", default_user.username)
     except Exception as e:
         logger.error(f"数据库表创建失败: {e}")
         raise
@@ -79,6 +87,7 @@ app.include_router(user_router)
 app.include_router(resource_router)
 app.include_router(tag_router)
 app.include_router(ai_router)
+app.include_router(settings_router)
 
 
 @app.get("/")
@@ -90,7 +99,10 @@ async def root():
 @app.get("/health")
 async def health_check():
     """健康检查"""
-    return {"status": "healthy"}
+    return {
+        "status": "healthy",
+        "mode": "single-user" if settings.SINGLE_USER_MODE else "multi-user",
+    }
 
 
 if __name__ == "__main__":

@@ -1,21 +1,27 @@
-import { useRequest } from 'alova/client';
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getResources, getResourcesByTag } from '../api/methods/resource.methods';
-import { getUserTags } from '../api/methods/tag.methods';
 import type { ResourceResponse } from '../api/types/resource.types';
-import AuthModal from '../components/AuthModal';
 import BookmarkModal from '../components/BookmarkModal';
 import CreateTagModal from '../components/CreateTagModal';
 import DeleteTagModal from '../components/DeleteTagModal';
 import EditResourceModal from '../components/EditResourceModal';
 import LoadingDots from '../components/LoadingDots';
 import { useAuth } from '../hooks/useAuth';
+import { useResources } from '../contexts/ResourceContext';
 import toast from '../utils/toast';
 
 const Home: React.FC = () => {
-  const { isAuthenticated, user, isLoading: authLoading, refreshAuth } = useAuth();
-  const [showAuthModal, setShowAuthModal] = useState(false);
+  const { isLoading: authLoading } = useAuth();
+  const {
+    tags,
+    resources,
+    pagination,
+    selectedTag,
+    isLoadingTags,
+    isLoadingResources,
+    selectTag,
+    goToPage,
+  } = useResources();
   const [showBookmarkModal, setShowBookmarkModal] = useState(false);
   const [showCreateTagModal, setShowCreateTagModal] = useState(false);
   const [showDeleteTagModal, setShowDeleteTagModal] = useState(false);
@@ -25,54 +31,7 @@ const Home: React.FC = () => {
   
   // 收藏链接相关状态
   const [bookmarkUrl, setBookmarkUrl] = useState('');
-  
-  // 标签和资源相关状态
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
   const [isMobile, setIsMobile] = useState(false);
-  
-  // 使用useRequest管理标签请求
-  const {
-    loading: isLoadingTags,
-    data: tagsResponse,
-    send: refreshTags
-  } = useRequest(getUserTags, { immediate: false, force: true });
-  
-  // 从响应中提取标签数组
-  const tags = Array.isArray(tagsResponse) ? tagsResponse : [];
-  
-  // 使用useRequest管理资源请求
-  const {
-    loading: isLoadingResources,
-    data: resourcesResponse,
-    send: refreshResources
-  } = useRequest(
-    (
-      params: { tag?: string | null; page?: number; size?: number } = {}
-    ) => {
-      const { tag, page = 1, size = 20 } = params;
-      return tag
-        ? getResourcesByTag(tag, page, size)
-        : getResources(page, size);
-    },
-    { immediate: false, force: true }
-  );
-  
-  // 从响应中提取数据
-  const resources = resourcesResponse?.resources || [];
-  const pagination = resourcesResponse ? {
-    total: resourcesResponse.total,
-    page: resourcesResponse.page,
-    size: resourcesResponse.size,
-    pages: resourcesResponse.pages,
-  } : { total: 0, page: 1, size: 20, pages: 0 };
-
-  // 检查登录状态，未登录则显示登录模态框
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      setShowAuthModal(true);
-    }
-  }, [authLoading, isAuthenticated]);
 
   // 检测屏幕大小
   useEffect(() => {
@@ -85,45 +44,6 @@ const Home: React.FC = () => {
     
     return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
-
-  // 用户登录后加载标签
-  useEffect(() => {
-    if (isAuthenticated) {
-      refreshTags();
-    }
-  }, [isAuthenticated]);
-
-  // 根据标签选择加载资源
-  useEffect(() => {
-    if (!isAuthenticated) {
-      return;
-    }
-
-    setCurrentPage(1);
-
-    if (selectedTag) {
-      refreshResources({ tag: selectedTag, page: 1 });
-    } else {
-      refreshResources({ page: 1 });
-    }
-  }, [isAuthenticated, selectedTag]);
-
-  // 当标签列表变化时，校验当前选择是否仍然存在
-  useEffect(() => {
-    if (!selectedTag) {
-      return;
-    }
-
-    const exists = tags.some((tag) => tag.name === selectedTag);
-    if (!exists) {
-      setSelectedTag(null);
-    }
-  }, [tags, selectedTag]);
-
-  const handleAuthSuccess = () => {
-    setShowAuthModal(false);
-    refreshAuth();
-  };
 
   const handleBookmarkSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,23 +60,14 @@ const Home: React.FC = () => {
     }
   };
 
-  const handleBookmarkSuccess = () => {
-    setBookmarkUrl('');
-    
-    // 清除 alova 相关缓存，强制重新请求数据
-    refreshTags({ force: true }); // 强制重新加载标签，跳过缓存
-    setCurrentPage(1);
-    const options = { force: true };
-    if (selectedTag) {
-      refreshResources({ tag: selectedTag, page: 1 }, options);
-    } else {
-      refreshResources({ page: 1 }, options);
+  const handleBookmarkSuccess = (createdResource?: ResourceResponse) => {
+    if (createdResource) {
+      setBookmarkUrl('');
     }
   };
 
   const handleCreateTagSuccess = () => {
-    // 强制重新加载标签，跳过缓存
-    refreshTags({ force: true });
+    setShowCreateTagModal(false);
   };
 
   const handleDeleteTag = (tagId: number, tagName: string) => {
@@ -165,29 +76,12 @@ const Home: React.FC = () => {
   };
 
   const handleDeleteTagSuccess = () => {
-    // 强制重新加载标签，跳过缓存
-    refreshTags({ force: true });
-    
-    // 如果删除的是当前选中的标签，清空选中状态
-    if (tagToDelete && selectedTag === tagToDelete.name) {
-      setSelectedTag(null);
-    }
-    
+    setShowDeleteTagModal(false);
     setTagToDelete(null);
   };
 
   const handlePageChange = (newPage: number) => {
-    if (newPage < 1 || newPage > pagination.pages) {
-      return;
-    }
-
-    setCurrentPage(newPage);
-
-    if (selectedTag) {
-      refreshResources({ tag: selectedTag, page: newPage });
-    } else {
-      refreshResources({ page: newPage });
-    }
+    goToPage(newPage);
   };
 
   const handleEditResource = (resource: ResourceResponse) => {
@@ -196,12 +90,7 @@ const Home: React.FC = () => {
   };
 
   const handleEditResourceSuccess = () => {
-    // 强制重新加载当前标签的资源
-    if (selectedTag) {
-      refreshResources({ tag: selectedTag, page: currentPage });
-    } else {
-      refreshResources({ page: currentPage });
-    }
+    setShowEditResourceModal(false);
     setResourceToEdit(null);
   };
 
@@ -248,7 +137,7 @@ const Home: React.FC = () => {
               LinkBox
             </h1>
             <p className="text-xs sm:text-sm opacity-70" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-              欢迎回来，{user?.username}！收藏您喜欢的链接
+              欢迎回来！收藏您喜欢的链接
             </p>
           </div>
           
@@ -342,7 +231,7 @@ const Home: React.FC = () => {
                       borderColor: 'rgba(19, 0, 0, 1)',
                       color: 'rgba(19, 0, 0, 1)',
                     }}
-                    onClick={() => setSelectedTag(null)}
+                    onClick={() => selectTag(null)}
                   >
                     全部资源
                   </motion.div>
@@ -368,7 +257,7 @@ const Home: React.FC = () => {
                       }}
                     >
                       <button
-                        onClick={() => setSelectedTag(tag.name)}
+                        onClick={() => selectTag(tag.name)}
                         className="flex-1 text-left"
                       >
                         #{tag.name}
@@ -426,7 +315,6 @@ const Home: React.FC = () => {
         </div>
 
         {/* 资源列表 */}
-        {isAuthenticated && (
         <div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 sm:mb-4 gap-2 sm:gap-0">
               <h3 className="text-base sm:text-lg font-bold" style={{ color: 'rgba(19, 0, 0, 1)' }}>
@@ -584,15 +472,7 @@ const Home: React.FC = () => {
               </>
             )}
           </div>
-        )}
       </div>
-
-      {/* 登录注册模态框 */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onSuccess={handleAuthSuccess}
-      />
 
       {/* 收藏模态框 */}
       <BookmarkModal
@@ -614,7 +494,10 @@ const Home: React.FC = () => {
         isOpen={showDeleteTagModal}
         tagName={tagToDelete?.name || ''}
         tagId={tagToDelete?.id || 0}
-        onClose={() => setShowDeleteTagModal(false)}
+        onClose={() => {
+          setShowDeleteTagModal(false);
+          setTagToDelete(null);
+        }}
         onSuccess={handleDeleteTagSuccess}
       />
 
@@ -623,7 +506,10 @@ const Home: React.FC = () => {
         <EditResourceModal
           isOpen={showEditResourceModal}
           resource={resourceToEdit}
-          onClose={() => setShowEditResourceModal(false)}
+          onClose={() => {
+            setShowEditResourceModal(false);
+            setResourceToEdit(null);
+          }}
           onSuccess={handleEditResourceSuccess}
         />
       )}

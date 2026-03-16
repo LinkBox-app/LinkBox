@@ -7,28 +7,19 @@ from fastapi.responses import StreamingResponse
 from langchain.agents import create_tool_calling_agent, AgentExecutor
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from typing_extensions import Annotated, TypedDict
 
-from config import settings
 from database import get_db
 from models import User
 from schemas.ai_schemas import ChatRequest
+from utils.ai_client import create_chat_model, get_effective_ai_settings
 from utils.auth import get_current_user
 from utils.langchain_tools import get_tools
 
 # 初始化路由器
 router = APIRouter(prefix="/ai", tags=["AI对话"])
-
-# 初始化LLM
-llm = ChatOpenAI(
-    base_url=settings.AI_BASE_URL,
-    api_key=settings.AI_API_KEY,
-    model=settings.AI_MODEL,
-    streaming=True,  # 启用流式响应
-)
 
 # System Prompt
 SYSTEM_PROMPT = """你是一个AI助手，请用中文回复"""
@@ -74,6 +65,8 @@ async def ai_chat_stream(
     返回SSE格式的流式响应
     """
     try:
+        llm = create_chat_model(db, current_user.id, streaming=True)
+
         # 检查是否有消息
         if not request.messages:
             raise HTTPException(status_code=400, detail="消息列表不能为空")
@@ -126,7 +119,9 @@ async def ai_chat_stream(
         raise HTTPException(status_code=500, detail=f"流式对话失败: {str(e)}")
 
 
-async def process_agent_event(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+async def process_agent_event(
+    event: Dict[str, Any], model_name: str
+) -> Optional[Dict[str, Any]]:
     """处理 agent 事件并格式化为 SSE 数据"""
     event_kind = event.get("event")
     event_name = event.get("name", "")
@@ -143,7 +138,7 @@ async def process_agent_event(event: Dict[str, Any]) -> Optional[Dict[str, Any]]
             return {
                 "type": "thinking",
                 "content": chunk.content,
-                "metadata": {"model": settings.AI_MODEL}
+                "metadata": {"model": model_name}
             }
     
     # 工具调用开始
@@ -208,6 +203,9 @@ async def ai_chat_agent(
             async def progress_callback(progress_data: Dict[str, Any]):
                 print(f"[Progress Callback] Received: {progress_data.get('type', 'unknown')}")
                 await progress_queue.put(progress_data)
+
+            effective_ai_settings = get_effective_ai_settings(db, current_user.id)
+            llm = create_chat_model(db, current_user.id, streaming=True)
             
             # 创建工具列表（传入必要参数）
             tools = get_tools(
@@ -250,7 +248,8 @@ async def ai_chat_agent(
             # 创建两个异步生成器
             agent_stream = process_agent_stream(
                 agent_executor, 
-                {"input": current_input, "chat_history": chat_history}
+                {"input": current_input, "chat_history": chat_history},
+                effective_ai_settings.ai_model,
             )
             progress_stream = process_progress_stream(progress_queue)
             
@@ -278,10 +277,12 @@ async def ai_chat_agent(
     )
 
 
-async def process_agent_stream(agent_executor: AgentExecutor, inputs: Dict[str, Any]):
+async def process_agent_stream(
+    agent_executor: AgentExecutor, inputs: Dict[str, Any], model_name: str
+):
     """处理 Agent 事件流"""
     async for event in agent_executor.astream_events(inputs, version="v2"):
-        event_data = await process_agent_event(event)
+        event_data = await process_agent_event(event, model_name)
         if event_data:
             yield event_data
 

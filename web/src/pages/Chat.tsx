@@ -26,10 +26,10 @@ interface Message {
 
 // sessionStorage key
 const getChatMessagesKey = (userId?: number) => 
-  `linkbox_chat_messages_${userId || 'guest'}`;
+  `linkbox_chat_messages_${userId || 'local'}`;
 
 const Chat: React.FC = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const {
@@ -83,22 +83,9 @@ const Chat: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isAgentStreaming, toolProgress, currentThinking]);
 
-  // 监听用户登录状态，登出时清空消息
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setMessages([]);
-    }
-  }, [isAuthenticated]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputMessage.trim() || isAgentStreaming) return;
-
-    // 检查登录状态
-    if (!isAuthenticated) {
-      toast.error('请先登录');
-      return;
-    }
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
@@ -272,7 +259,7 @@ const Chat: React.FC = () => {
               LinkBot
             </h1>
             <p className="text-xs sm:text-sm opacity-70 truncate" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-              {isAuthenticated ? `你好，${user?.username}！` : '请先登录使用AI助手'}
+              你好，{user?.username || '本地用户'}！
             </p>
           </div>
           
@@ -329,24 +316,7 @@ const Chat: React.FC = () => {
       <div className="flex-1 max-w-4xl mx-auto w-full p-3 sm:p-4 md:p-6 flex flex-col scrollbar-hide">
         {/* 消息列表 */}
         <div className="flex-1 overflow-y-auto mb-3 sm:mb-4 md:mb-6">
-          {!isAuthenticated ? (
-            <div className="flex items-center justify-center h-full px-4">
-              <div 
-                className="text-center p-4 sm:p-6 md:p-8 border-2 border-solid transform rotate-[-0.2deg] max-w-sm sm:max-w-md mx-auto w-full"
-                style={{
-                  backgroundColor: 'rgba(255, 248, 232, 1)',
-                  borderColor: 'rgba(19, 0, 0, 1)',
-                  color: 'rgba(19, 0, 0, 1)',
-                }}
-              >
-                <div className="text-2xl sm:text-3xl md:text-4xl mb-2 sm:mb-3 md:mb-4">🔒</div>
-                <h2 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2">需要登录</h2>
-                <p className="text-xs sm:text-sm opacity-70">
-                  请先登录账号才能使用AI助手功能
-                </p>
-              </div>
-            </div>
-          ) : messages.length === 0 ? (
+          {messages.length === 0 ? (
             <div className="flex items-center justify-center h-full px-4">
               <div 
                 className="text-center p-4 sm:p-6 md:p-8 border-2 border-solid transform rotate-[-0.2deg] max-w-sm sm:max-w-md mx-auto w-full"
@@ -656,7 +626,7 @@ const Chat: React.FC = () => {
             />
             <motion.button
               type="submit"
-              disabled={isAgentStreaming || !inputMessage.trim() || !isAuthenticated}
+              disabled={isAgentStreaming || !inputMessage.trim()}
               className="px-3 py-2 sm:px-4 sm:py-3 md:px-6 md:py-4 border-2 border-solid font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm sm:text-base min-h-[48px] sm:min-h-[52px] md:min-h-auto flex items-center justify-center"
               whileHover={{ 
                 scale: 1.02,

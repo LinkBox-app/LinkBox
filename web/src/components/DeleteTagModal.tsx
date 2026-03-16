@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence, type Variants, type AnimationGeneratorType } from 'framer-motion';
-import { deleteTag } from '../api/methods/tag.methods';
+import { useResources } from '../contexts/ResourceContext';
 import toast from '../utils/toast';
 import LoadingDots from './LoadingDots';
 
@@ -20,6 +20,7 @@ const DeleteTagModal: React.FC<DeleteTagModalProps> = ({
   onSuccess 
 }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const { deleteTag } = useResources();
 
   // 动画变体
   const modalVariants: Variants = {
@@ -74,7 +75,7 @@ const DeleteTagModal: React.FC<DeleteTagModalProps> = ({
     setIsLoading(true);
     
     try {
-      await deleteTag(tagId);
+      await deleteTag(tagId, tagName);
       toast.success('标签删除成功！');
       onClose();
       onSuccess();

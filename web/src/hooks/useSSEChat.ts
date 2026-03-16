@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'react';
-import { AUTH_TOKEN_KEY } from '../storage-key.constant';
 import { BASE_URL } from '../api';
 
 // 工具调用类型
@@ -69,15 +68,6 @@ export const useSSEChat = (): UseSSEChatReturn => {
       const controller = new AbortController();
       setAbortController(controller);
 
-      // 获取认证token
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
-      if (!token) {
-        setIsLoading(false);
-        setError('未找到认证token，请重新登录');
-        reject(new Error('未找到认证token'));
-        return;
-      }
-
       // 准备请求数据
       const requestData = { messages };
 
@@ -86,7 +76,6 @@ export const useSSEChat = (): UseSSEChatReturn => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(requestData),
         signal: controller.signal,

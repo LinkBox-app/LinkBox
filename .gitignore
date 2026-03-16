@@ -1,10 +1,25 @@
 .DS_Store
 docs
 .venv/
+**/.venv/
 
 .vscode/
 **/__pycache__/
 **/*.pyc
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
 **/.env
+!**/.env.example
+
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/*.sqlite
+**/*.sqlite3
+
+**/node_modules/
+**/dist/
+**/build/
 
 pnpm-lock.yaml

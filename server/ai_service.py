@@ -3,23 +3,13 @@ from typing import Any, Callable, Dict, List, Optional
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.tools import tool
-from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from config import settings
 from crud import resource_crud, tag_crud
 from database import get_db
 from models import Resource
-
-# 非流式LLM（用于工作流中的结构化输出）
-llm = ChatOpenAI(
-    base_url=settings.AI_BASE_URL,
-    api_key=settings.AI_API_KEY,
-    model=settings.AI_MODEL,
-    streaming=False,
-    # temperature=0.1,  # 让AI更准确
-)
+from utils.ai_client import create_chat_model
 
 
 class TagSelectionOutput(BaseModel):
@@ -228,7 +218,7 @@ def _select_relevant_tags(user_query: str, available_tags: List[str]) -> List[st
     ).partial(format_instructions=parser.get_format_instructions())
 
     # 构建链
-    chain = prompt | llm | parser
+    chain = prompt | create_chat_model(db, user_id, streaming=False) | parser
 
     try:
         result = chain.invoke(
@@ -305,7 +295,7 @@ def _select_matching_resources(
     ).partial(format_instructions=parser.get_format_instructions())
 
     # 构建链
-    chain = prompt | llm | parser
+    chain = prompt | create_chat_model(db, user_id, streaming=False) | parser
 
     try:
         result = chain.invoke(

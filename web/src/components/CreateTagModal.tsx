@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence, type Variants, type AnimationGeneratorType } from 'framer-motion';
-import { createTag, type TagCreateRequest } from '../api/methods/tag.methods';
+import type { TagCreateRequest } from '../api/methods/tag.methods';
+import { useResources } from '../contexts/ResourceContext';
 import toast from '../utils/toast';
 import LoadingDots from './LoadingDots';
 
@@ -17,6 +18,7 @@ const CreateTagModal: React.FC<CreateTagModalProps> = ({
 }) => {
   const [tagName, setTagName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { createTag } = useResources();
 
   // 动画变体
   const modalVariants: Variants = {

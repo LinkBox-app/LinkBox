@@ -7,24 +7,14 @@ from typing import Any, Callable, Dict, Optional, Type, List
 from langchain_core.tools import BaseTool
 from langchain_core.output_parsers import JsonOutputParser, PydanticOutputParser
 from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, SystemMessagePromptTemplate
-from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from config import settings
 from crud import resource_crud, tag_crud
-from database import get_db
 from models import Resource, User
-from utils.web_scraper import fetch_web_content_to_markdown
 from errors import BusinessError
-
-# 非流式LLM（用于工作流中的结构化输出）
-llm = ChatOpenAI(
-    base_url=settings.AI_BASE_URL,
-    api_key=settings.AI_API_KEY,
-    model=settings.AI_MODEL,
-    streaming=False,
-)
+from utils.ai_client import create_chat_model
+from utils.web_scraper import fetch_web_content_to_markdown
 
 class TagSelectionOutput(BaseModel):
     """AI标签选择输出模型"""
@@ -89,6 +79,14 @@ class StreamingTool(BaseTool):
     def _run(self, *args, **kwargs):
         """同步运行（不推荐使用）"""
         return asyncio.run(self._arun(*args, **kwargs))
+
+    def build_llm(self):
+        """根据当前用户配置创建非流式 LLM。"""
+        user_id = getattr(self, "user_id", None)
+        db = getattr(self, "db", None)
+        if not user_id or db is None:
+            raise ValueError("工具未正确初始化：缺少 user_id 或 db")
+        return create_chat_model(db, user_id, streaming=False)
 
 
 class SearchResourcesTool(StreamingTool):
@@ -321,7 +319,7 @@ class SearchResourcesTool(StreamingTool):
         ]).partial(format_instructions=parser.get_format_instructions())
         
         # 构建链
-        chain = prompt | llm | parser
+        chain = prompt | self.build_llm() | parser
         
         try:
             # 使用 asyncio.run_in_executor 将同步调用转为异步
@@ -389,7 +387,7 @@ class SearchResourcesTool(StreamingTool):
         ]).partial(format_instructions=parser.get_format_instructions())
         
         # 构建链
-        chain = prompt | llm | parser
+        chain = prompt | self.build_llm() | parser
         
         try:
             # 使用 asyncio.run_in_executor 将同步调用转为异步
@@ -518,7 +516,7 @@ class ResourcePreviewTool(StreamingTool):
                 ])
                 
                 # 创建链并执行
-                chain = prompt | llm | parser
+                chain = prompt | self.build_llm() | parser
                 
                 # 使用asyncio.run_in_executor执行同步调用
                 loop = asyncio.get_event_loop()

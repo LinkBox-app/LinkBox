@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence, type Variants, type AnimationGeneratorType } from 'framer-motion';
-import { createResource } from '../api/methods/resource.methods';
 import { createResourcePreviewAsync } from '../api/methods/resource.async.methods';
 import type {
     ResourceCreateRequest,
+    ResourceResponse,
     ResourcePreviewRequest
 } from '../api/types/resource.types';
+import { useResources } from '../contexts/ResourceContext';
 import toast from '../utils/toast';
 import LoadingDots from './LoadingDots';
 import { useProgress } from '../contexts/ProgressContext';
@@ -14,7 +15,7 @@ interface BookmarkModalProps {
   isOpen: boolean;
   url: string;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (resource?: ResourceResponse) => void;
   initialData?: {
     title: string;
     digest: string;
@@ -42,6 +43,7 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
   const [tagInput, setTagInput] = useState('');
   
   const { addTask, updateTask } = useProgress();
+  const { createBookmark } = useResources();
 
   // 动画变体
   const modalVariants: Variants = {
@@ -90,11 +92,16 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
     onClose();
   };
 
-  const handlePreview = async () => {
+  const handlePreview = () => {
     if (!url.trim()) {
       toast.error('URL不能为空');
       return;
     }
+
+    const request: ResourcePreviewRequest = {
+      url: url,
+      note: note,
+    };
 
     // 创建进度任务
     const taskId = addTask({
@@ -104,55 +111,41 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
       progress: 0,
       message: '准备开始抓取...'
     });
-    
-    try {
-      const request: ResourcePreviewRequest = {
-        url: url,
-        note: note,
-      };
-      
-      // 使用异步预览生成
-      const preview = await createResourcePreviewAsync(request, (progress) => {
+
+    handleClose();
+    toast.success('已加入后台任务，请在右下角查看进度');
+
+    void createResourcePreviewAsync(request, (progress) => {
         updateTask(taskId, {
           status: progress.step,
           progress: progress.progress,
           message: progress.message,
           error: progress.error
         });
+      })
+      .then((preview) => {
+        // 标记任务完成，并存储结果
+        updateTask(taskId, {
+          status: 'completed',
+          progress: 100,
+          message: '预览生成完成',
+          result: preview
+        });
+
+        toast.success('预览生成完成，请在右下角查看结果');
+      })
+      .catch((error: any) => {
+        console.error('生成预览失败:', error);
+        toast.error(error.message || '生成预览失败，请重试');
+
+        // 标记任务失败
+        updateTask(taskId, {
+          status: 'error',
+          progress: 0,
+          message: '生成失败',
+          error: error.message || '生成预览失败'
+        });
       });
-      
-      setEditData({
-        title: preview.title,
-        digest: preview.digest,
-        tags: preview.tags,
-      });
-      
-      // 关闭模态框并跳转到编辑步骤
-      handleClose();
-      
-      // 显示成功消息
-      toast.success('预览生成完成，请在右下角查看结果');
-      
-      // 标记任务完成，并存储结果
-      updateTask(taskId, {
-        status: 'completed',
-        progress: 100,
-        message: '预览生成完成',
-        result: preview
-      });
-      
-    } catch (error: any) {
-      console.error('生成预览失败:', error);
-      toast.error(error.message || '生成预览失败，请重试');
-      
-      // 标记任务失败
-      updateTask(taskId, {
-        status: 'error',
-        progress: 0,
-        message: '生成失败',
-        error: error.message || '生成预览失败'
-      });
-    }
   };
 
   const handleAddTag = () => {
@@ -206,10 +199,10 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
         tags: editData.tags,
       };
       
-      await createResource(request);
+      const createdResource = await createBookmark(request);
       toast.success('收藏成功！');
       handleClose();
-      onSuccess();
+      onSuccess(createdResource);
     } catch (error: any) {
       console.error('创建资源失败:', error);
       toast.error(error.message || '收藏失败，请重试');

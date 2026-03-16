@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from config import settings
 from crud.user_crud import authenticate_user, create_user
 from database import get_db
 from errors import AuthenticationError, BusinessError
@@ -28,6 +29,9 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
 
     返回JWT token和用户信息
     """
+    if settings.SINGLE_USER_MODE:
+        raise HTTPException(status_code=404, detail="个人模式下不开放注册功能")
+
     try:
         # 创建用户
         new_user = create_user(db, user_data)
@@ -57,6 +61,9 @@ async def login(login_data: UserLogin, db: Session = Depends(get_db)):
 
     返回JWT token和用户信息
     """
+    if settings.SINGLE_USER_MODE:
+        raise HTTPException(status_code=404, detail="个人模式下不开放登录功能")
+
     # 验证用户
     user = authenticate_user(db, login_data.username, login_data.password)
 
@@ -78,9 +85,7 @@ async def login(login_data: UserLogin, db: Session = Depends(get_db)):
 @router.get("/profile", response_model=UserProfile, summary="获取用户信息")
 async def get_profile(current_user: User = Depends(get_current_user)):
     """
-    获取当前用户信息（需要认证）
-
-    需要在请求头中包含: Authorization: Bearer <token>
+    获取当前用户信息。
     """
     return UserProfile.model_validate(current_user)
 
@@ -89,9 +94,10 @@ async def get_profile(current_user: User = Depends(get_current_user)):
 async def refresh_token(current_user: User = Depends(get_current_user)):
     """
     刷新JWT token（需要认证）
-
-    需要在请求头中包含: Authorization: Bearer <token>
     """
+    if settings.SINGLE_USER_MODE:
+        raise HTTPException(status_code=404, detail="个人模式下不开放 token 刷新功能")
+
     # 生成新的JWT token
     access_token = create_access_token(
         data={"user_id": current_user.id, "username": current_user.username}

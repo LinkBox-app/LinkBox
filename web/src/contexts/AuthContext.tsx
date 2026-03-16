@@ -7,7 +7,6 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { LOGIN_FLAG_KEY, AUTH_TOKEN_KEY } from '../storage-key.constant';
 import { getProfile } from '../api/methods/auth.methods';
 import type { UserProfile } from '../api/types/auth.types';
 
@@ -18,8 +17,6 @@ interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
-  login: (user: UserProfile, token: string) => void;
-  logout: () => void;
   refreshAuth: () => Promise<void>;
 }
 
@@ -36,18 +33,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setAuthState((prev) => ({ ...prev, isLoading: true }));
 
-      const isLoggedIn = localStorage.getItem(LOGIN_FLAG_KEY) === 'true';
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
-
-      if (!isLoggedIn || !token) {
-        setAuthState({
-          isAuthenticated: false,
-          user: null,
-          isLoading: false,
-        });
-        return;
-      }
-
       const userProfile = await getProfile();
 
       setAuthState({
@@ -56,10 +41,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isLoading: false,
       });
     } catch (error) {
-      console.error('验证用户状态失败:', error);
-
-      localStorage.removeItem(LOGIN_FLAG_KEY);
-      localStorage.removeItem(AUTH_TOKEN_KEY);
+      console.error('加载本地用户失败:', error);
 
       setAuthState({
         isAuthenticated: false,
@@ -69,28 +51,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const login = useCallback((user: UserProfile, token: string) => {
-    localStorage.setItem(LOGIN_FLAG_KEY, 'true');
-    localStorage.setItem(AUTH_TOKEN_KEY, token);
-
-    setAuthState({
-      isAuthenticated: true,
-      user,
-      isLoading: false,
-    });
-  }, []);
-
-  const logout = useCallback(() => {
-    localStorage.removeItem(LOGIN_FLAG_KEY);
-    localStorage.removeItem(AUTH_TOKEN_KEY);
-
-    setAuthState({
-      isAuthenticated: false,
-      user: null,
-      isLoading: false,
-    });
-  }, []);
-
   useEffect(() => {
     void checkAuthStatus();
   }, [checkAuthStatus]);
@@ -98,11 +58,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const value = useMemo<AuthContextValue>(
     () => ({
       ...authState,
-      login,
-      logout,
       refreshAuth: checkAuthStatus,
     }),
-    [authState, login, logout, checkAuthStatus]
+    [authState, checkAuthStatus]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

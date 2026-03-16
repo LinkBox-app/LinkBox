@@ -1,14 +1,21 @@
+from typing import Optional
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     # 配置文件的模型，字段名与环境变量名对应
 
+    # 应用模式
+    SINGLE_USER_MODE: bool = True
+    DEFAULT_USERNAME: str = "local"
+
     # 数据库配置
-    MYSQL_HOST: str
-    MYSQL_PORT: int
-    MYSQL_USER: str
-    MYSQL_PASSWORD: str
+    DATABASE_URL: Optional[str] = "sqlite:///./linkbox.db"
+    MYSQL_HOST: Optional[str] = None
+    MYSQL_PORT: Optional[int] = None
+    MYSQL_USER: Optional[str] = None
+    MYSQL_PASSWORD: Optional[str] = None
     MYSQL_DB: str = "linkbox"
 
     # JWT 配置
@@ -19,7 +26,28 @@ class Settings(BaseSettings):
     # AI 配置
     AI_BASE_URL: str = "https://api.siliconflow.cn/v1"
     AI_MODEL: str = "moonshotai/Kimi-K2-Instruct"
-    AI_API_KEY: str
+    AI_API_KEY: Optional[str] = None
+
+    @property
+    def database_url(self) -> str:
+        """获取当前使用的数据库连接串。"""
+        if self.DATABASE_URL:
+            return self.DATABASE_URL
+
+        if all(
+            [
+                self.MYSQL_HOST,
+                self.MYSQL_PORT,
+                self.MYSQL_USER,
+                self.MYSQL_PASSWORD,
+            ]
+        ):
+            return (
+                f"mysql+pymysql://{self.MYSQL_USER}:{self.MYSQL_PASSWORD}"
+                f"@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DB}?charset=utf8mb4"
+            )
+
+        return "sqlite:///./linkbox.db"
 
     # Pydantic Settings 配置
     model_config = SettingsConfigDict(

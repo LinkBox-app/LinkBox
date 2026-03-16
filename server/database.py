@@ -1,20 +1,28 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
 from config import settings
 from models import Base
 
-# 构建 MySQL 数据库连接 URL
-DATABASE_URL = f"mysql+pymysql://{settings.MYSQL_USER}:{settings.MYSQL_PASSWORD}@{settings.MYSQL_HOST}:{settings.MYSQL_PORT}/{settings.MYSQL_DB}?charset=utf8mb4"
+DATABASE_URL = settings.database_url
 
-# 创建数据库引擎
-engine = create_engine(
-    DATABASE_URL,
-    echo=False,  # 设置为 True 可以看到 SQL 语句
-    pool_size=10,  # 连接池大小
-    max_overflow=20,  # 连接池溢出大小
-    pool_pre_ping=True,  # 连接前检查
-    pool_recycle=3600,  # 连接回收时间（秒）
-)
+engine_kwargs = {
+    "echo": False,
+}
+
+if DATABASE_URL.startswith("sqlite"):
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+else:
+    engine_kwargs.update(
+        {
+            "pool_size": 10,
+            "max_overflow": 20,
+            "pool_pre_ping": True,
+            "pool_recycle": 3600,
+        }
+    )
+
+engine = create_engine(DATABASE_URL, **engine_kwargs)
 
 # 创建会话工厂
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

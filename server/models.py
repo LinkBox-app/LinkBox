@@ -22,6 +22,24 @@ class User(Base):
     __table_args__ = (Index("idx_username", "username"),)
 
 
+class AISettings(Base):
+    """AI 配置表"""
+
+    __tablename__ = "ai_settings"
+
+    id = Column(Integer, primary_key=True, autoincrement=True, comment="配置ID")
+    user_id = Column(Integer, nullable=False, comment="用户ID")
+    ai_base_url = Column(String(500), nullable=False, comment="AI 接口地址")
+    ai_model = Column(String(255), nullable=False, comment="AI 模型名称")
+    ai_api_key = Column(Text, nullable=False, default="", comment="AI API Key")
+    created_at = Column(DateTime, default=func.now(), comment="创建时间")
+    updated_at = Column(
+        DateTime, default=func.now(), onupdate=func.now(), comment="更新时间"
+    )
+
+    __table_args__ = (Index("unique_user_ai_settings", "user_id", unique=True),)
+
+
 class Resource(Base):
     """资源表"""
 
@@ -38,7 +56,7 @@ class Resource(Base):
     )
     is_deleted = Column(Boolean, default=False, comment="是否删除")
 
-    __table_args__ = (Index("idx_user_id", "user_id"),)
+    __table_args__ = (Index("idx_resources_user_id", "user_id"),)
 
 
 class Tag(Base):
@@ -56,7 +74,7 @@ class Tag(Base):
     is_deleted = Column(Boolean, default=False, comment="是否删除")
 
     __table_args__ = (
-        Index("idx_user_id", "user_id"),
+        Index("idx_tags_user_id", "user_id"),
         Index("unique_user_tag", "user_id", "name", unique=True),
     )
 

@@ -1,5 +1,4 @@
 import { useCallback, useState } from "react";
-import { AUTH_TOKEN_KEY } from "../storage-key.constant";
 import { BASE_URL } from "../api";
 
 // 事件类型
@@ -186,23 +185,11 @@ export const useAgentStream = (): UseAgentStreamReturn => {
       const controller = new AbortController();
       setAbortController(controller);
 
-      // 获取认证token
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
-      if (!token) {
-        setState((prev) => ({
-          ...prev,
-          isStreaming: false,
-          error: "未找到认证token，请重新登录",
-        }));
-        throw new Error("未找到认证token");
-      }
-
       try {
         const response = await fetch(`${BASE_URL}/ai/chat/agent`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ messages }),
           signal: controller.signal,

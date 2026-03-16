@@ -4,17 +4,10 @@ from langchain_core.prompts import (
     HumanMessagePromptTemplate,
     SystemMessagePromptTemplate,
 )
-from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
-from config import settings
-
-# AI 客户端实例
-llm = ChatOpenAI(
-    base_url=settings.AI_BASE_URL,
-    api_key=settings.AI_API_KEY,
-    model=settings.AI_MODEL,
-)
+from utils.ai_client import create_chat_model
 
 
 class ResourceSummary(BaseModel):
@@ -26,7 +19,11 @@ class ResourceSummary(BaseModel):
 
 
 def generate_resource_summary(
-    web_content: str, user_note: str = "", user_tags: list[str] = None
+    db: Session,
+    user_id: int,
+    web_content: str,
+    user_note: str = "",
+    user_tags: list[str] = None,
 ) -> ResourceSummary:
     """
     使用 AI 根据网页内容和用户备注生成资源摘要
@@ -78,6 +75,7 @@ def generate_resource_summary(
         ]
     )
 
+    llm = create_chat_model(db, user_id, streaming=False)
     prompt_and_llm = prompt | llm
     output = prompt_and_llm.invoke(
         {
