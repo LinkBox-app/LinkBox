@@ -18,7 +18,7 @@ const CreateTagModal: React.FC<CreateTagModalProps> = ({
 }) => {
   const [tagName, setTagName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { createTag } = useResources();
+  const { createTag, refreshTags } = useResources();
 
   // 动画变体
   const modalVariants: Variants = {
@@ -84,6 +84,7 @@ const CreateTagModal: React.FC<CreateTagModalProps> = ({
       };
       
       await createTag(request);
+      await refreshTags();
       toast.success('标签创建成功！');
       handleClose();
       onSuccess();

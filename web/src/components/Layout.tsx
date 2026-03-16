@@ -4,11 +4,13 @@ import IconSvg from '../images/icon.svg';
 import ProgressFloatingWindow from './ProgressFloatingWindow';
 import BookmarkModal from './BookmarkModal';
 import { useProgress } from '../contexts/ProgressContext';
+import { useResources } from '../contexts/ResourceContext';
 import toast from '../utils/toast';
 
 const Layout: React.FC = () => {
   const location = useLocation();
   const { tasks, removeTask, clearCompleted } = useProgress();
+  const { fetchList } = useResources();
   const [showEditModal, setShowEditModal] = useState(false);
   const [editModalData, setEditModalData] = useState<{
     url: string;
@@ -29,6 +31,7 @@ const Layout: React.FC = () => {
   const handleEditModalSuccess = () => {
     setShowEditModal(false);
     setEditModalData(null);
+    void fetchList(null, 1);
   };
 
   return (

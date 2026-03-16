@@ -10,6 +10,7 @@ import {
 } from 'react';
 import {
   createResource as createResourceRequest,
+  deleteResource as deleteResourceRequest,
   getResources,
   getResourcesByTag,
   updateResource as updateResourceRequest,
@@ -45,8 +46,9 @@ interface ResourceContextValue {
   currentPage: number;
   isLoadingTags: boolean;
   isLoadingResources: boolean;
-  refreshTags: () => Promise<void>;
+  refreshTags: () => Promise<TagResponse[]>;
   refreshResources: (tag?: string | null, page?: number) => Promise<void>;
+  fetchList: (tag?: string | null, page?: number) => Promise<void>;
   selectTag: (tag: string | null) => void;
   goToPage: (page: number) => void;
   createTag: (request: TagCreateRequest) => Promise<TagResponse>;
@@ -56,6 +58,7 @@ interface ResourceContextValue {
     resourceId: number,
     resourceData: ResourceUpdate
   ) => Promise<ResourceResponse>;
+  deleteBookmark: (resourceId: number) => Promise<void>;
 }
 
 const DEFAULT_PAGINATION: PaginationState = {
@@ -80,7 +83,7 @@ export const ResourceProvider = ({ children }: { children: ReactNode }) => {
 
   const loadTags = useCallback(async () => {
     if (authLoading || !isAuthenticated) {
-      return;
+      return [] as TagResponse[];
     }
 
     const requestId = ++tagsRequestIdRef.current;
@@ -88,16 +91,19 @@ export const ResourceProvider = ({ children }: { children: ReactNode }) => {
     try {
       setIsLoadingTags(true);
       const nextTags = await getUserTags();
+      const normalizedTags = Array.isArray(nextTags) ? nextTags : [];
       if (tagsRequestIdRef.current !== requestId) {
-        return;
+        return normalizedTags;
       }
 
-      setTags(Array.isArray(nextTags) ? nextTags : []);
+      setTags(normalizedTags);
+      return normalizedTags;
     } catch (error: any) {
       if (tagsRequestIdRef.current === requestId) {
         console.error('加载标签失败:', error);
         toast.error(error.message || '加载标签失败');
       }
+      return [] as TagResponse[];
     } finally {
       if (tagsRequestIdRef.current === requestId) {
         setIsLoadingTags(false);
@@ -108,27 +114,42 @@ export const ResourceProvider = ({ children }: { children: ReactNode }) => {
   const loadResources = useCallback(
     async (tag: string | null, page: number) => {
       if (authLoading || !isAuthenticated) {
-        return;
+        return null;
       }
 
       const requestId = ++resourcesRequestIdRef.current;
 
       try {
         setIsLoadingResources(true);
-        const nextResources = tag
-          ? await getResourcesByTag(tag, page, 20)
-          : await getResources(page, 20);
+        let targetPage = page;
+        let nextResources = tag
+          ? await getResourcesByTag(tag, targetPage, 20)
+          : await getResources(targetPage, 20);
 
         if (resourcesRequestIdRef.current !== requestId) {
-          return;
+          return nextResources;
+        }
+
+        if (nextResources.pages > 0 && targetPage > nextResources.pages) {
+          targetPage = nextResources.pages;
+          nextResources = tag
+            ? await getResourcesByTag(tag, targetPage, 20)
+            : await getResources(targetPage, 20);
+
+          if (resourcesRequestIdRef.current !== requestId) {
+            return nextResources;
+          }
         }
 
         setResourcesResponse(nextResources);
+        setCurrentPage(targetPage);
+        return nextResources;
       } catch (error: any) {
         if (resourcesRequestIdRef.current === requestId) {
           console.error('加载资源失败:', error);
           toast.error(error.message || '加载资源失败');
         }
+        return null;
       } finally {
         if (resourcesRequestIdRef.current === requestId) {
           setIsLoadingResources(false);
@@ -136,6 +157,31 @@ export const ResourceProvider = ({ children }: { children: ReactNode }) => {
       }
     },
     [authLoading, isAuthenticated]
+  );
+
+  const syncAfterMutation = useCallback(
+    async (
+      tag: string | null = selectedTag,
+      page: number = currentPage,
+      options: { refreshTags?: boolean } = {}
+    ) => {
+      const { refreshTags: shouldRefreshTags = true } = options;
+      let nextTag = tag;
+      let nextPage = page;
+
+      if (shouldRefreshTags) {
+        const nextTags = await loadTags();
+        if (nextTag && !nextTags.some((item) => item.name === nextTag)) {
+          nextTag = null;
+          nextPage = 1;
+        }
+      }
+
+      setSelectedTag(nextTag);
+      setCurrentPage(nextPage);
+      await loadResources(nextTag, nextPage);
+    },
+    [currentPage, loadResources, loadTags, selectedTag]
   );
 
   useEffect(() => {
@@ -185,7 +231,7 @@ export const ResourceProvider = ({ children }: { children: ReactNode }) => {
     : DEFAULT_PAGINATION;
 
   const refreshTags = useCallback(async () => {
-    await loadTags();
+    return await loadTags();
   }, [loadTags]);
 
   const refreshResources = useCallback(
@@ -193,6 +239,24 @@ export const ResourceProvider = ({ children }: { children: ReactNode }) => {
       await loadResources(tag, page);
     },
     [currentPage, loadResources, selectedTag]
+  );
+
+  const fetchList = useCallback(
+    async (tag: string | null = selectedTag, page: number = currentPage) => {
+      const nextTags = await loadTags();
+      let nextTag = tag;
+      let nextPage = page;
+
+      if (nextTag && !nextTags.some((item) => item.name === nextTag)) {
+        nextTag = null;
+        nextPage = 1;
+      }
+
+      setSelectedTag(nextTag);
+      setCurrentPage(nextPage);
+      await loadResources(nextTag, nextPage);
+    },
+    [currentPage, loadResources, loadTags, selectedTag]
   );
 
   const selectTag = useCallback((tag: string | null) => {
@@ -214,15 +278,7 @@ export const ResourceProvider = ({ children }: { children: ReactNode }) => {
   const createTag = useCallback(
     async (request: TagCreateRequest) => {
       const createdTag = await createTagRequest(request);
-
-      setTags((prev) => {
-        if (prev.some((tag) => tag.id === createdTag.id)) {
-          return prev;
-        }
-        return [...prev, createdTag];
-      });
-
-      void loadTags();
+      await loadTags();
       return createdTag;
     },
     [loadTags]
@@ -231,87 +287,43 @@ export const ResourceProvider = ({ children }: { children: ReactNode }) => {
   const deleteTag = useCallback(
     async (tagId: number, tagName: string) => {
       await deleteTagRequest(tagId);
-
-      setTags((prev) => prev.filter((tag) => tag.id !== tagId));
-
       if (selectedTag === tagName) {
-        setSelectedTag(null);
-        setCurrentPage(1);
+        await syncAfterMutation(null, 1);
       } else {
-        void loadResources(selectedTag, currentPage);
+        await syncAfterMutation(selectedTag, currentPage);
       }
-
-      void loadTags();
     },
-    [currentPage, loadResources, loadTags, selectedTag]
+    [currentPage, selectedTag, syncAfterMutation]
   );
 
   const createBookmark = useCallback(
     async (request: ResourceCreateRequest) => {
       const createdResource = await createResourceRequest(request);
-
-      setResourcesResponse((prev) => {
-        const size = prev?.size ?? 20;
-        const existingResources = prev?.resources ?? [];
-        const alreadyExists = existingResources.some(
-          (resource) => resource.id === createdResource.id
-        );
-        const total = (prev?.total ?? existingResources.length) + (alreadyExists ? 0 : 1);
-        const nextResources = [
-          createdResource,
-          ...existingResources.filter((resource) => resource.id !== createdResource.id),
-        ];
-
-        return {
-          resources: nextResources.slice(0, size),
-          total,
-          page: 1,
-          size,
-          pages: Math.max(1, Math.ceil(total / size)),
-        };
-      });
-
-      setSelectedTag(null);
-      setCurrentPage(1);
-      void loadTags();
-
-      if (selectedTag === null && currentPage === 1) {
-        void loadResources(null, 1);
-      }
-
+      await syncAfterMutation(null, 1);
       return createdResource;
     },
-    [currentPage, loadResources, loadTags, selectedTag]
+    [syncAfterMutation]
   );
 
   const updateBookmark = useCallback(
     async (resourceId: number, resourceData: ResourceUpdate) => {
       const updatedResource = await updateResourceRequest(resourceId, resourceData);
-
-      setResourcesResponse((prev) => {
-        if (!prev) {
-          return prev;
-        }
-
-        const matchesCurrentFilter =
-          selectedTag === null || updatedResource.tags.includes(selectedTag);
-        const nextResources = matchesCurrentFilter
-          ? prev.resources.map((resource) =>
-              resource.id === updatedResource.id ? updatedResource : resource
-            )
-          : prev.resources.filter((resource) => resource.id !== updatedResource.id);
-
-        return {
-          ...prev,
-          resources: nextResources,
-        };
-      });
-
-      void loadTags();
-      void loadResources(selectedTag, currentPage);
+      await syncAfterMutation(selectedTag, currentPage);
       return updatedResource;
     },
-    [currentPage, loadResources, loadTags, selectedTag]
+    [currentPage, selectedTag, syncAfterMutation]
+  );
+
+  const deleteBookmark = useCallback(
+    async (resourceId: number) => {
+      await deleteResourceRequest(resourceId);
+      const shouldGoToPreviousPage =
+        currentPage > 1 && (resourcesResponse?.resources.length ?? 0) <= 1;
+      const nextPage = shouldGoToPreviousPage ? currentPage - 1 : currentPage;
+
+      await syncAfterMutation(selectedTag, nextPage);
+    },
+    [currentPage, resourcesResponse?.resources.length, selectedTag, syncAfterMutation]
   );
 
   const value = useMemo<ResourceContextValue>(
@@ -325,10 +337,12 @@ export const ResourceProvider = ({ children }: { children: ReactNode }) => {
       isLoadingResources,
       refreshTags,
       refreshResources,
+      fetchList,
       selectTag,
       goToPage,
       createTag,
       deleteTag,
+      deleteBookmark,
       createBookmark,
       updateBookmark,
     }),
@@ -336,7 +350,9 @@ export const ResourceProvider = ({ children }: { children: ReactNode }) => {
       createBookmark,
       createTag,
       currentPage,
+      deleteBookmark,
       deleteTag,
+      fetchList,
       goToPage,
       isLoadingResources,
       isLoadingTags,

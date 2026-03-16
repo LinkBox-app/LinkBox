@@ -20,7 +20,14 @@ const DeleteTagModal: React.FC<DeleteTagModalProps> = ({
   onSuccess 
 }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const { deleteTag } = useResources();
+  const {
+    currentPage,
+    deleteTag,
+    refreshResources,
+    refreshTags,
+    selectTag,
+    selectedTag,
+  } = useResources();
 
   // 动画变体
   const modalVariants: Variants = {
@@ -76,6 +83,15 @@ const DeleteTagModal: React.FC<DeleteTagModalProps> = ({
     
     try {
       await deleteTag(tagId, tagName);
+      const nextTags = await refreshTags();
+
+      if (selectedTag === tagName && !nextTags.some((tag) => tag.name === tagName)) {
+        selectTag(null);
+        await refreshResources(null, 1);
+      } else {
+        await refreshResources(selectedTag, currentPage);
+      }
+
       toast.success('标签删除成功！');
       onClose();
       onSuccess();

@@ -43,7 +43,7 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
   const [tagInput, setTagInput] = useState('');
   
   const { addTask, updateTask } = useProgress();
-  const { createBookmark } = useResources();
+  const { createBookmark, refreshResources, refreshTags, selectTag } = useResources();
 
   // 动画变体
   const modalVariants: Variants = {
@@ -103,17 +103,23 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
       note: note,
     };
 
+    const refreshHomeData = async () => {
+      await refreshTags();
+      selectTag(null);
+      await refreshResources(null, 1);
+    };
+
     // 创建进度任务
     const taskId = addTask({
-      title: '生成网页预览',
+      title: '抓取并保存链接',
       url: url,
       status: 'pending',
       progress: 0,
-      message: '准备开始抓取...'
+      message: '准备开始抓取并入库...'
     });
 
     handleClose();
-    toast.success('已加入后台任务，请在右下角查看进度');
+    toast.success('已加入后台任务，抓取完成后会自动入库');
 
     void createResourcePreviewAsync(request, (progress) => {
         updateTask(taskId, {
@@ -124,26 +130,46 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
         });
       })
       .then((preview) => {
+        updateTask(taskId, {
+          status: 'processing',
+          progress: 95,
+          message: '正在保存到收藏夹...'
+        });
+
+        return createBookmark({
+          url: preview.url,
+          title: preview.title,
+          digest: preview.digest,
+          tags: preview.tags,
+        }).then(async (createdResource) => {
+          await refreshHomeData();
+          return { preview, createdResource };
+        });
+      })
+      .then(({ preview, createdResource }) => {
         // 标记任务完成，并存储结果
         updateTask(taskId, {
           status: 'completed',
           progress: 100,
-          message: '预览生成完成',
-          result: preview
+          message: '抓取完成，已自动保存到收藏夹',
+          result: {
+            previewData: preview,
+            savedResource: createdResource,
+          }
         });
 
-        toast.success('预览生成完成，请在右下角查看结果');
+        toast.success('抓取完成，链接和标签已自动入库');
       })
       .catch((error: any) => {
         console.error('生成预览失败:', error);
-        toast.error(error.message || '生成预览失败，请重试');
+        toast.error(error.message || '抓取或自动入库失败，请重试');
 
         // 标记任务失败
         updateTask(taskId, {
           status: 'error',
           progress: 0,
-          message: '生成失败',
-          error: error.message || '生成预览失败'
+          message: '抓取或入库失败',
+          error: error.message || '抓取或自动入库失败'
         });
       });
   };
@@ -192,6 +218,12 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
     setIsLoading(true);
     
     try {
+      const refreshHomeData = async () => {
+        await refreshTags();
+        selectTag(null);
+        await refreshResources(null, 1);
+      };
+
       const request: ResourceCreateRequest = {
         url: url,
         title: editData.title,
@@ -200,6 +232,7 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
       };
       
       const createdResource = await createBookmark(request);
+      await refreshHomeData();
       toast.success('收藏成功！');
       handleClose();
       onSuccess(createdResource);

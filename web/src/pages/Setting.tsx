@@ -6,11 +6,9 @@ import {
   updateAISettings,
 } from '../api/methods/settings.methods';
 import type { AISettings } from '../api/types/settings.types';
-import { useAuth } from '../hooks/useAuth';
 import toast from '../utils/toast';
 
 const Setting: React.FC = () => {
-  const { user } = useAuth();
   const [aiSettings, setAISettings] = useState<AISettings>({
     ai_base_url: '',
     ai_model: '',

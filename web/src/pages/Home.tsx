@@ -4,6 +4,7 @@ import type { ResourceResponse } from '../api/types/resource.types';
 import BookmarkModal from '../components/BookmarkModal';
 import CreateTagModal from '../components/CreateTagModal';
 import DeleteTagModal from '../components/DeleteTagModal';
+import DeleteResourceModal from '../components/DeleteResourceModal';
 import EditResourceModal from '../components/EditResourceModal';
 import LoadingDots from '../components/LoadingDots';
 import { useAuth } from '../hooks/useAuth';
@@ -13,6 +14,8 @@ import toast from '../utils/toast';
 const Home: React.FC = () => {
   const { isLoading: authLoading } = useAuth();
   const {
+    currentPage,
+    fetchList,
     tags,
     resources,
     pagination,
@@ -26,8 +29,10 @@ const Home: React.FC = () => {
   const [showCreateTagModal, setShowCreateTagModal] = useState(false);
   const [showDeleteTagModal, setShowDeleteTagModal] = useState(false);
   const [showEditResourceModal, setShowEditResourceModal] = useState(false);
+  const [showDeleteResourceModal, setShowDeleteResourceModal] = useState(false);
   const [tagToDelete, setTagToDelete] = useState<{ id: number; name: string } | null>(null);
   const [resourceToEdit, setResourceToEdit] = useState<ResourceResponse | null>(null);
+  const [resourceToDelete, setResourceToDelete] = useState<ResourceResponse | null>(null);
   
   // 收藏链接相关状态
   const [bookmarkUrl, setBookmarkUrl] = useState('');
@@ -64,10 +69,12 @@ const Home: React.FC = () => {
     if (createdResource) {
       setBookmarkUrl('');
     }
+    void fetchList(null, 1);
   };
 
   const handleCreateTagSuccess = () => {
     setShowCreateTagModal(false);
+    void fetchList(selectedTag, currentPage);
   };
 
   const handleDeleteTag = (tagId: number, tagName: string) => {
@@ -78,6 +85,7 @@ const Home: React.FC = () => {
   const handleDeleteTagSuccess = () => {
     setShowDeleteTagModal(false);
     setTagToDelete(null);
+    void fetchList(selectedTag, currentPage);
   };
 
   const handlePageChange = (newPage: number) => {
@@ -89,9 +97,21 @@ const Home: React.FC = () => {
     setShowEditResourceModal(true);
   };
 
+  const handleDeleteResource = (resource: ResourceResponse) => {
+    setResourceToDelete(resource);
+    setShowDeleteResourceModal(true);
+  };
+
   const handleEditResourceSuccess = () => {
     setShowEditResourceModal(false);
     setResourceToEdit(null);
+    void fetchList(selectedTag, currentPage);
+  };
+
+  const handleDeleteResourceSuccess = () => {
+    setShowDeleteResourceModal(false);
+    setResourceToDelete(null);
+    void fetchList(selectedTag, currentPage);
   };
 
   const formatDate = (dateString: string) => {
@@ -409,22 +429,40 @@ const Home: React.FC = () => {
                             ? `${resource.url.substring(0, isMobile ? 30 : 50)}...` 
                             : resource.url}
                         </a>
-                        <motion.button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditResource(resource);
-                          }}
-                          className="px-2 py-1 text-xs border border-solid font-bold shadow-[2px_2px_0_rgba(19,0,0,1)] hover:shadow-[3px_3px_0_rgba(19,0,0,1)] hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all self-start sm:self-auto"
-                          style={{
-                            backgroundColor: 'rgba(255, 111, 46, 1)',
-                            borderColor: 'rgba(19, 0, 0, 1)',
-                            color: 'rgba(19, 0, 0, 1)',
-                          }}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          ✏️ 编辑
-                        </motion.button>
+                        <div className="flex items-center gap-2 self-start sm:self-auto">
+                          <motion.button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteResource(resource);
+                            }}
+                            className="px-2 py-1 text-xs border border-solid font-bold shadow-[2px_2px_0_rgba(19,0,0,1)] hover:shadow-[3px_3px_0_rgba(19,0,0,1)] hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all"
+                            style={{
+                              backgroundColor: 'rgba(239, 68, 68, 1)',
+                              borderColor: 'rgba(19, 0, 0, 1)',
+                              color: 'rgba(255, 255, 255, 1)',
+                            }}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            🗑️ 删除
+                          </motion.button>
+                          <motion.button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditResource(resource);
+                            }}
+                            className="px-2 py-1 text-xs border border-solid font-bold shadow-[2px_2px_0_rgba(19,0,0,1)] hover:shadow-[3px_3px_0_rgba(19,0,0,1)] hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all"
+                            style={{
+                              backgroundColor: 'rgba(255, 111, 46, 1)',
+                              borderColor: 'rgba(19, 0, 0, 1)',
+                              color: 'rgba(19, 0, 0, 1)',
+                            }}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            ✏️ 编辑
+                          </motion.button>
+                        </div>
                       </div>
                       </motion.div>
                     ))}
@@ -513,6 +551,16 @@ const Home: React.FC = () => {
           onSuccess={handleEditResourceSuccess}
         />
       )}
+
+      <DeleteResourceModal
+        isOpen={showDeleteResourceModal}
+        resource={resourceToDelete}
+        onClose={() => {
+          setShowDeleteResourceModal(false);
+          setResourceToDelete(null);
+        }}
+        onSuccess={handleDeleteResourceSuccess}
+      />
     </motion.div>
   );
 };

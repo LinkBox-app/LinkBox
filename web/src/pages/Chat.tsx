@@ -259,7 +259,7 @@ const Chat: React.FC = () => {
               LinkBot
             </h1>
             <p className="text-xs sm:text-sm opacity-70 truncate" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-              你好，{user?.username || '本地用户'}！
+              您好，您想找什么？
             </p>
           </div>
           

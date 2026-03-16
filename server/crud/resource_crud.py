@@ -3,7 +3,11 @@ from typing import List, Optional, Tuple
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
-from crud.tag_crud import create_tag_if_not_exists, get_tags_by_resource
+from crud.tag_crud import (
+    create_tag_if_not_exists,
+    get_tags_by_resource,
+    soft_delete_orphan_tags,
+)
 from errors import BusinessError
 from models import Resource, ResourceTag, Tag
 
@@ -85,14 +89,19 @@ def update_resource(
         # 获取当前标签
         current_tags = get_tags_by_resource(db, resource_id, user_id)
         current_tag_names = {tag.name for tag in current_tags}
+        current_tag_map = {tag.name: tag.id for tag in current_tags}
         new_tag_names = {tag_name.strip() for tag_name in tags if tag_name.strip()}
 
         # 删除不再需要的标签关联
         tags_to_remove = current_tag_names - new_tag_names
+        removed_tag_ids = [
+            tag_id for tag_name, tag_id in current_tag_map.items() if tag_name in tags_to_remove
+        ]
         if tags_to_remove:
             db.query(ResourceTag).filter(
                 ResourceTag.resource_id == resource_id,
                 ResourceTag.user_id == user_id,
+                ResourceTag.is_deleted == False,
                 ResourceTag.tag_id.in_(
                     db.query(Tag.id).filter(
                         Tag.name.in_(tags_to_remove), Tag.user_id == user_id
@@ -123,6 +132,9 @@ def update_resource(
                 )
                 db.add(resource_tag)
 
+        if removed_tag_ids:
+            soft_delete_orphan_tags(db, user_id, removed_tag_ids)
+
     db.commit()
     db.refresh(resource)
     return resource
@@ -134,13 +146,30 @@ def delete_resource(db: Session, resource_id: int, user_id: int) -> bool:
     if not resource:
         return False
 
+    tag_ids = [
+        tag_id
+        for (tag_id,) in db.query(ResourceTag.tag_id)
+        .filter(
+            ResourceTag.resource_id == resource_id,
+            ResourceTag.user_id == user_id,
+            ResourceTag.is_deleted == False,
+        )
+        .distinct()
+        .all()
+    ]
+
     # 软删除资源
     resource.is_deleted = True
 
     # 删除相关的标签关联
     db.query(ResourceTag).filter(
-        ResourceTag.resource_id == resource_id, ResourceTag.user_id == user_id
+        ResourceTag.resource_id == resource_id,
+        ResourceTag.user_id == user_id,
+        ResourceTag.is_deleted == False,
     ).update({"is_deleted": True})
+
+    if tag_ids:
+        soft_delete_orphan_tags(db, user_id, tag_ids)
 
     db.commit()
     return True

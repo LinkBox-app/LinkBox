@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+interface CompletedTaskResult {
+  previewData?: any;
+  savedResource?: any;
+}
+
 export interface ProgressTask {
   id: string;
   title: string;
@@ -8,7 +13,7 @@ export interface ProgressTask {
   status: 'pending' | 'fetching' | 'processing' | 'completed' | 'error';
   progress: number;
   message: string;
-  result?: any;
+  result?: CompletedTaskResult;
   error?: string;
   createdAt: Date;
 }
@@ -233,8 +238,12 @@ const ProgressFloatingWindow: React.FC<ProgressFloatingWindowProps> = ({
                       color: 'rgba(19, 0, 0, 1)'
                     }}
                     onClick={() => {
-                      if (task.status === 'completed' && task.result) {
-                        onPreviewComplete?.(task.result, task.url);
+                      if (
+                        task.status === 'completed' &&
+                        task.result?.previewData &&
+                        !task.result.savedResource
+                      ) {
+                        onPreviewComplete?.(task.result.previewData, task.url);
                       } else {
                         onTaskClick?.(task);
                       }
@@ -262,7 +271,7 @@ const ProgressFloatingWindow: React.FC<ProgressFloatingWindowProps> = ({
                     </div>
                     
                     <div className="text-xs opacity-70 mb-1 truncate">
-                      {task.status === 'error' ? task.error : '处理完成'}
+                      {task.status === 'error' ? task.error : task.message}
                     </div>
                     
                     <div className="flex items-center justify-between">

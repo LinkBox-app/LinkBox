@@ -36,7 +36,9 @@ export interface TagDeleteResponse {
  * @returns Promise<TagResponse[]>
  */
 export const getUserTags = () =>
-  alova.Get<TagResponse[]>("/tags/");
+  alova.Get<TagResponse[]>("/tags/", {
+    cacheFor: 0,
+  });
 
 /**
  * 创建标签

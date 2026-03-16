@@ -25,6 +25,17 @@ def get_tag_by_name(db: Session, user_id: int, tag_name: str) -> Optional[Tag]:
     )
 
 
+def get_tag_by_name_including_deleted(
+    db: Session, user_id: int, tag_name: str
+) -> Optional[Tag]:
+    """根据名称获取用户的标签，包括已删除的记录"""
+    return (
+        db.query(Tag)
+        .filter(Tag.user_id == user_id, Tag.name == tag_name)
+        .first()
+    )
+
+
 def create_tag(db: Session, user_id: int, tag_name: str) -> Tag:
     """创建新标签"""
     tag_name = tag_name.strip()
@@ -36,6 +47,13 @@ def create_tag(db: Session, user_id: int, tag_name: str) -> Tag:
     existing_tag = get_tag_by_name(db, user_id, tag_name)
     if existing_tag:
         raise BusinessError(f"标签 '{tag_name}' 已存在")
+
+    deleted_tag = get_tag_by_name_including_deleted(db, user_id, tag_name)
+    if deleted_tag and deleted_tag.is_deleted:
+        deleted_tag.is_deleted = False
+        db.commit()
+        db.refresh(deleted_tag)
+        return deleted_tag
 
     db_tag = Tag(name=tag_name, user_id=user_id)
     db.add(db_tag)
@@ -52,6 +70,13 @@ def create_tag_if_not_exists(db: Session, user_id: int, tag_name: str) -> Tag:
     existing_tag = get_tag_by_name(db, user_id, tag_name)
     if existing_tag:
         return existing_tag
+
+    deleted_tag = get_tag_by_name_including_deleted(db, user_id, tag_name)
+    if deleted_tag and deleted_tag.is_deleted:
+        deleted_tag.is_deleted = False
+        db.commit()
+        db.refresh(deleted_tag)
+        return deleted_tag
 
     db_tag = Tag(name=tag_name, user_id=user_id)
     db.add(db_tag)
@@ -113,3 +138,37 @@ def get_tags_by_resource(db: Session, resource_id: int, user_id: int) -> List[Ta
         )
         .all()
     )
+
+
+def soft_delete_orphan_tags(
+    db: Session, user_id: int, tag_ids: Optional[List[int]] = None
+) -> None:
+    """软删除没有任何有效资源关联的标签"""
+    candidate_query = db.query(Tag).filter(
+        Tag.user_id == user_id,
+        Tag.is_deleted == False,
+    )
+
+    if tag_ids:
+        candidate_query = candidate_query.filter(Tag.id.in_(tag_ids))
+
+    candidate_tags = candidate_query.all()
+    if not candidate_tags:
+        return
+
+    candidate_tag_ids = [tag.id for tag in candidate_tags]
+    active_tag_ids = {
+        tag_id
+        for (tag_id,) in db.query(ResourceTag.tag_id)
+        .filter(
+            ResourceTag.user_id == user_id,
+            ResourceTag.is_deleted == False,
+            ResourceTag.tag_id.in_(candidate_tag_ids),
+        )
+        .distinct()
+        .all()
+    }
+
+    for tag in candidate_tags:
+        if tag.id not in active_tag_ids:
+            tag.is_deleted = True

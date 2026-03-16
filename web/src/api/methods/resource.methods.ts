@@ -17,6 +17,7 @@ import type {
 export const getResources = (page: number = 1, size: number = 20) =>
   alova.Get<ResourceListResponse>("/resources", {
     params: { page, size },
+    cacheFor: 0,
   });
 
 /**
@@ -33,6 +34,7 @@ export const getResourcesByTag = (
 ) =>
   alova.Get<ResourceListResponse>(`/resources/by-tag/${tagName}`, {
     params: { page, size },
+    cacheFor: 0,
   });
 
 /**
