@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence, type Variants, type AnimationGeneratorType } from 'framer-motion';
 import type { ResourceResponse, ResourceUpdate } from '../api/types/resource.types';
+import { useI18n } from '../contexts/I18nContext';
 import { useResources } from '../contexts/ResourceContext';
 import toast from '../utils/toast';
 import LoadingDots from './LoadingDots';
@@ -18,6 +19,7 @@ const EditResourceModal: React.FC<EditResourceModalProps> = ({
   resource,
   onSuccess,
 }) => {
+  const { t } = useI18n();
   const [isLoading, setIsLoading] = useState(false);
   const { updateBookmark } = useResources();
   const [editData, setEditData] = useState({
@@ -112,7 +114,7 @@ const EditResourceModal: React.FC<EditResourceModalProps> = ({
 
   const handleSave = async () => {
     if (!editData.title.trim()) {
-      toast.error('标题不能为空');
+      toast.error(t('modals.editTitleEmpty'));
       return;
     }
 
@@ -126,12 +128,12 @@ const EditResourceModal: React.FC<EditResourceModalProps> = ({
       };
 
       await updateBookmark(resource.id, updateData);
-      toast.success('资源更新成功！');
+      toast.success(t('modals.editSuccess'));
       handleClose();
       onSuccess();
     } catch (error: any) {
       console.error('更新资源失败:', error);
-      toast.error(error.message || '更新资源失败，请重试');
+      toast.error(error.message || t('modals.editError'));
     } finally {
       setIsLoading(false);
     }
@@ -175,13 +177,13 @@ const EditResourceModal: React.FC<EditResourceModalProps> = ({
         {/* 内容区域 */}
         <div className="flex-1 overflow-hidden">
           <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-            编辑资源信息
+            {t('modals.editResourceTitle')}
           </h3>
 
           {/* URL 显示 */}
           <div className="mb-3 sm:mb-4">
             <label className="block text-xs sm:text-sm font-bold mb-1 sm:mb-2" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-              链接地址
+              {t('modals.resourceLink')}
             </label>
             <div 
               className="p-2 sm:p-3 border-2 border-solid text-xs sm:text-sm break-all opacity-70"
@@ -199,7 +201,7 @@ const EditResourceModal: React.FC<EditResourceModalProps> = ({
             {/* 标题 */}
             <div className="mb-3 sm:mb-4">
               <label className="block text-xs sm:text-sm font-bold mb-1 sm:mb-2" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-                标题 *
+                {t('modals.resourceTitle')}
               </label>
               <motion.input
                 type="text"
@@ -215,7 +217,7 @@ const EditResourceModal: React.FC<EditResourceModalProps> = ({
                 }}
                 maxLength={500}
                 disabled={isLoading}
-                placeholder="输入资源标题"
+                placeholder={t('modals.resourceTitlePlaceholder')}
                 whileFocus={{ 
                   boxShadow: '4px 4px 0px rgba(255, 111, 46, 0.3)',
                   x: -1,
@@ -227,7 +229,7 @@ const EditResourceModal: React.FC<EditResourceModalProps> = ({
             {/* 摘要 */}
             <div className="mb-3 sm:mb-4">
               <label className="block text-xs sm:text-sm font-bold mb-1 sm:mb-2" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-                摘要
+                {t('modals.resourceDigest')}
               </label>
               <motion.textarea
                 value={editData.digest}
@@ -242,7 +244,7 @@ const EditResourceModal: React.FC<EditResourceModalProps> = ({
                 }}
                 rows={3}
                 disabled={isLoading}
-                placeholder="输入资源摘要"
+                placeholder={t('modals.resourceDigestPlaceholder')}
                 whileFocus={{ 
                   boxShadow: '4px 4px 0px rgba(255, 111, 46, 0.3)',
                   x: -1,
@@ -254,7 +256,7 @@ const EditResourceModal: React.FC<EditResourceModalProps> = ({
             {/* 标签 */}
             <div className="mb-3 sm:mb-4">
               <label className="block text-xs sm:text-sm font-bold mb-1 sm:mb-2" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-                标签
+                {t('modals.resourceTags')}
               </label>
               
               {/* 已有标签 */}
@@ -301,7 +303,7 @@ const EditResourceModal: React.FC<EditResourceModalProps> = ({
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="输入标签名称"
+                  placeholder={t('modals.resourceTagPlaceholder')}
                   className="flex-1 p-2 border-2 border-solid focus:outline-none focus:border-orange-400 transition-colors text-sm"
                   style={{
                     backgroundColor: 'rgba(255, 255, 255, 1)',
@@ -332,7 +334,7 @@ const EditResourceModal: React.FC<EditResourceModalProps> = ({
                     boxShadow: '1px 1px 0px rgba(19, 0, 0, 0.5)'
                   }}
                 >
-                  添加
+                  {t('modals.addTag')}
                 </motion.button>
               </div>
             </div>
@@ -360,7 +362,7 @@ const EditResourceModal: React.FC<EditResourceModalProps> = ({
                 boxShadow: '2px 2px 0px rgba(19, 0, 0, 0.5)'
               }}
             >
-              取消
+              {t('common.cancel')}
             </motion.button>
             <motion.button
               onClick={handleSave}
@@ -384,7 +386,7 @@ const EditResourceModal: React.FC<EditResourceModalProps> = ({
                 boxShadow: '2px 2px 0px rgba(19, 0, 0, 1)'
               }}
             >
-              {isLoading ? <LoadingDots text="保存中" /> : '保存更改'}
+              {isLoading ? <LoadingDots text={t('modals.savingChanges')} /> : t('modals.saveChanges')}
             </motion.button>
           </div>
         </div>

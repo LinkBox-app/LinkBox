@@ -1,5 +1,26 @@
+import argparse
 import logging
+import os
+import sys
 from contextlib import asynccontextmanager
+
+
+def _bootstrap_runtime_env(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--host")
+    parser.add_argument("--port", type=int)
+    parser.add_argument("--data-dir")
+    args, _ = parser.parse_known_args(argv[1:])
+
+    if args.host:
+        os.environ["LINKBOX_HOST"] = args.host
+    if args.port:
+        os.environ["LINKBOX_PORT"] = str(args.port)
+    if args.data_dir:
+        os.environ["LINKBOX_DATA_DIR"] = args.data_dir
+
+
+_bootstrap_runtime_env(sys.argv)
 
 import uvicorn
 from fastapi import FastAPI
@@ -106,4 +127,8 @@ async def health_check():
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=7032)
+    uvicorn.run(
+        app,
+        host=os.environ.get("LINKBOX_HOST", "127.0.0.1"),
+        port=int(os.environ.get("LINKBOX_PORT", "7032")),
+    )

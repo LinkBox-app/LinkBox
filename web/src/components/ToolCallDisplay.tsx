@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useI18n } from '../contexts/I18nContext';
 import type { ToolCallInfo, ToolProgress } from '../hooks/useAgentStream';
 
 interface ToolCallDisplayProps {
@@ -7,6 +8,7 @@ interface ToolCallDisplayProps {
 }
 
 const ToolCallDisplay: React.FC<ToolCallDisplayProps> = ({ toolCall, progress }) => {
+  const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
 
   const getStatusColor = () => {
@@ -78,10 +80,10 @@ const ToolCallDisplay: React.FC<ToolCallDisplayProps> = ({ toolCall, progress })
             </span>
           )}
           {toolCall.status === 'completed' && (
-            <span className="text-sm opacity-70">✅ 已完成</span>
+            <span className="text-sm opacity-70">✅ {t('tools.completed')}</span>
           )}
           {toolCall.status === 'error' && (
-            <span className="text-sm opacity-70">❌ 出错</span>
+            <span className="text-sm opacity-70">❌ {t('tools.failed')}</span>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -105,7 +107,7 @@ const ToolCallDisplay: React.FC<ToolCallDisplayProps> = ({ toolCall, progress })
         <div className="border-t-2 border-solid p-3" style={{ borderColor: colors.border }}>
           {/* 输入参数 */}
           <div className="mb-3">
-            <div className="font-bold text-sm mb-1">输入参数:</div>
+            <div className="font-bold text-sm mb-1">{t('tools.input')}</div>
             <div 
               className="p-2 border border-solid transform rotate-[0.05deg]"
               style={{
@@ -123,7 +125,7 @@ const ToolCallDisplay: React.FC<ToolCallDisplayProps> = ({ toolCall, progress })
           {/* 输出结果 */}
           {toolCall.output && (
             <div>
-              <div className="font-bold text-sm mb-1">输出结果:</div>
+              <div className="font-bold text-sm mb-1">{t('tools.output')}</div>
               <div 
                 className="p-2 border border-solid transform rotate-[-0.05deg]"
                 style={{
@@ -144,7 +146,7 @@ const ToolCallDisplay: React.FC<ToolCallDisplayProps> = ({ toolCall, progress })
           {/* 错误信息 */}
           {toolCall.error && (
             <div>
-              <div className="font-bold text-sm mb-1">错误信息:</div>
+              <div className="font-bold text-sm mb-1">{t('tools.error')}</div>
               <div 
                 className="p-2 border border-solid"
                 style={{

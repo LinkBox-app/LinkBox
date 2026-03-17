@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence, type Variants, type AnimationGeneratorType } from 'framer-motion';
+import { useI18n } from '../contexts/I18nContext';
 import { useResources } from '../contexts/ResourceContext';
 import toast from '../utils/toast';
 import LoadingDots from './LoadingDots';
@@ -19,6 +20,7 @@ const DeleteTagModal: React.FC<DeleteTagModalProps> = ({
   onClose, 
   onSuccess 
 }) => {
+  const { t } = useI18n();
   const [isLoading, setIsLoading] = useState(false);
   const {
     currentPage,
@@ -92,12 +94,12 @@ const DeleteTagModal: React.FC<DeleteTagModalProps> = ({
         await refreshResources(selectedTag, currentPage);
       }
 
-      toast.success('标签删除成功！');
+      toast.success(t('modals.deleteTagSuccess'));
       onClose();
       onSuccess();
     } catch (error: any) {
       console.error('删除标签失败:', error);
-      toast.error(error.message || '删除标签失败，请重试');
+      toast.error(error.message || t('modals.deleteTagError'));
     } finally {
       setIsLoading(false);
     }
@@ -140,12 +142,12 @@ const DeleteTagModal: React.FC<DeleteTagModalProps> = ({
 
         <div>
           <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-            删除标签确认
+            {t('modals.deleteTagTitle')}
           </h3>
           
           <div className="mb-4 sm:mb-6">
             <p className="text-xs sm:text-sm mb-2 sm:mb-3" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-              您确定要删除标签 
+              {t('modals.deleteTagPromptPrefix')}
               <motion.span 
                 className="px-2 py-1 mx-1 border-2 border-solid font-bold inline-block text-xs sm:text-sm"
                 style={{
@@ -160,7 +162,7 @@ const DeleteTagModal: React.FC<DeleteTagModalProps> = ({
               >
                 #{tagName}
               </motion.span> 
-              吗？
+              {t('modals.deleteTagPromptSuffix')}
             </p>
             <motion.div 
               className="p-2 sm:p-3 border-2 border-solid text-xs font-semibold"
@@ -174,7 +176,7 @@ const DeleteTagModal: React.FC<DeleteTagModalProps> = ({
               initial="initial"
               animate="animate"
             >
-              ⚠️ 警告：删除标签后，该标签与所有资源的关联关系也将被删除，此操作不可恢复。
+              {t('modals.deleteTagWarning')}
             </motion.div>
           </div>
 
@@ -201,7 +203,7 @@ const DeleteTagModal: React.FC<DeleteTagModalProps> = ({
                 boxShadow: '2px 2px 0px rgba(19, 0, 0, 0.5)'
               }}
             >
-              取消
+              {t('common.cancel')}
             </motion.button>
             <motion.button
               type="button"
@@ -226,7 +228,7 @@ const DeleteTagModal: React.FC<DeleteTagModalProps> = ({
                 boxShadow: '2px 2px 0px rgba(19, 0, 0, 1)'
               }}
             >
-              {isLoading ? <LoadingDots text="删除中" /> : '确认删除'}
+              {isLoading ? <LoadingDots text={t('modals.deleteLoading')} /> : t('modals.confirmDelete')}
             </motion.button>
           </div>
         </div>

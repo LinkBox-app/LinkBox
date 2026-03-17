@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useI18n } from '../contexts/I18nContext';
 import { useAgentStream } from '../hooks/useAgentStream';
 import ToolProgressCard from './ToolProgressCard';
 import type { ChatMessage } from '../hooks/useAgentStream';
@@ -8,6 +9,7 @@ interface AgentChatProps {
 }
 
 const AgentChat: React.FC<AgentChatProps> = ({ onClose }) => {
+  const { t } = useI18n();
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -70,7 +72,7 @@ const AgentChat: React.FC<AgentChatProps> = ({ onClose }) => {
     <div className="flex flex-col h-full bg-white rounded-lg shadow-lg">
       {/* 标题栏 */}
       <div className="flex items-center justify-between px-6 py-4 border-b">
-        <h3 className="text-lg font-semibold text-gray-800">AI 智能助手</h3>
+        <h3 className="text-lg font-semibold text-gray-800">{t('agentChat.title')}</h3>
         {onClose && (
           <button
             onClick={onClose}
@@ -108,7 +110,7 @@ const AgentChat: React.FC<AgentChatProps> = ({ onClose }) => {
           <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
             <div className="flex items-center space-x-2 mb-1">
               <span className="text-lg animate-pulse">🧠</span>
-              <span className="text-sm text-blue-600 font-medium">AI正在思考...</span>
+              <span className="text-sm text-blue-600 font-medium">{t('agentChat.thinking')}</span>
             </div>
             <div className="text-sm text-gray-700">{currentThinking}</div>
           </div>
@@ -133,7 +135,7 @@ const AgentChat: React.FC<AgentChatProps> = ({ onClose }) => {
             <div key={toolName} className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
               <div className="flex items-center space-x-2 mb-2">
                 <span>🔧</span>
-                <span className="text-sm font-medium">{toolName} 调用完成</span>
+                <span className="text-sm font-medium">{toolName} {t('agentChat.toolCompleted')}</span>
               </div>
               {toolData.output && (
                 <div className="text-xs bg-white p-2 rounded border">
@@ -167,7 +169,7 @@ const AgentChat: React.FC<AgentChatProps> = ({ onClose }) => {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="输入你的问题，例如：搜索React相关的资源..."
+            placeholder={t('agentChat.inputPlaceholder')}
             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={isStreaming}
           />
@@ -177,7 +179,7 @@ const AgentChat: React.FC<AgentChatProps> = ({ onClose }) => {
               onClick={cancelStream}
               className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
             >
-              取消
+              {t('agentChat.cancel')}
             </button>
           ) : (
             <button
@@ -185,13 +187,13 @@ const AgentChat: React.FC<AgentChatProps> = ({ onClose }) => {
               disabled={!input.trim()}
               className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              发送
+              {t('agentChat.send')}
             </button>
           )}
         </div>
         {isStreaming && (
           <div className="mt-2 text-xs text-gray-500">
-            AI正在处理中...
+            {t('agentChat.processing')}
           </div>
         )}
       </form>

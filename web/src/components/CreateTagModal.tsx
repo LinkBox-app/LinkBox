@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence, type Variants, type AnimationGeneratorType } from 'framer-motion';
 import type { TagCreateRequest } from '../api/methods/tag.methods';
+import { useI18n } from '../contexts/I18nContext';
 import { useResources } from '../contexts/ResourceContext';
 import toast from '../utils/toast';
 import LoadingDots from './LoadingDots';
@@ -16,6 +17,7 @@ const CreateTagModal: React.FC<CreateTagModalProps> = ({
   onClose, 
   onSuccess 
 }) => {
+  const { t } = useI18n();
   const [tagName, setTagName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { createTag, refreshTags } = useResources();
@@ -67,12 +69,12 @@ const CreateTagModal: React.FC<CreateTagModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tagName.trim()) {
-      toast.error('标签名称不能为空');
+      toast.error(t('modals.createTagEmpty'));
       return;
     }
 
     if (tagName.trim().length > 50) {
-      toast.error('标签名称不能超过50个字符');
+      toast.error(t('modals.createTagTooLong'));
       return;
     }
 
@@ -85,12 +87,12 @@ const CreateTagModal: React.FC<CreateTagModalProps> = ({
       
       await createTag(request);
       await refreshTags();
-      toast.success('标签创建成功！');
+      toast.success(t('modals.createTagSuccess'));
       handleClose();
       onSuccess();
     } catch (error: any) {
       console.error('创建标签失败:', error);
-      toast.error(error.message || '创建标签失败，请重试');
+      toast.error(error.message || t('modals.createTagError'));
     } finally {
       setIsLoading(false);
     }
@@ -140,19 +142,19 @@ const CreateTagModal: React.FC<CreateTagModalProps> = ({
 
         <form onSubmit={handleSubmit}>
           <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-            创建新标签
+            {t('modals.createTagTitle')}
           </h3>
           
           <div className="mb-4 sm:mb-6">
             <label className="block text-xs sm:text-sm font-bold mb-1 sm:mb-2" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-              标签名称 *
+              {t('modals.createTagLabel')}
             </label>
             <motion.input
               type="text"
               value={tagName}
               onChange={(e) => setTagName(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="输入标签名称..."
+              placeholder={t('modals.createTagPlaceholder')}
               className="w-full p-2 sm:p-3 border-2 border-solid focus:outline-none transition-all text-sm sm:text-base"
               style={{
                 backgroundColor: 'rgba(255, 255, 255, 1)',
@@ -198,7 +200,7 @@ const CreateTagModal: React.FC<CreateTagModalProps> = ({
                 boxShadow: '2px 2px 0px rgba(19, 0, 0, 0.5)'
               }}
             >
-              取消
+              {t('common.cancel')}
             </motion.button>
             <motion.button
               type="submit"
@@ -222,7 +224,7 @@ const CreateTagModal: React.FC<CreateTagModalProps> = ({
                 boxShadow: '2px 2px 0px rgba(19, 0, 0, 1)'
               }}
             >
-              {isLoading ? <LoadingDots text="创建中" /> : '创建标签'}
+              {isLoading ? <LoadingDots text={t('modals.createTagLoading')} /> : t('modals.createTagAction')}
             </motion.button>
           </div>
         </form>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useI18n } from '../contexts/I18nContext';
 
 interface CompletedTaskResult {
   previewData?: any;
@@ -33,6 +34,7 @@ const ProgressFloatingWindow: React.FC<ProgressFloatingWindowProps> = ({
   onClearCompleted,
   onPreviewComplete
 }) => {
+  const { t } = useI18n();
   const [isMinimized, setIsMinimized] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
 
@@ -69,10 +71,14 @@ const ProgressFloatingWindow: React.FC<ProgressFloatingWindowProps> = ({
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
     
-    if (diffInSeconds < 60) return '刚刚';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}分钟前`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}小时前`;
-    return `${Math.floor(diffInSeconds / 86400)}天前`;
+    if (diffInSeconds < 60) return t('progress.justNow');
+    if (diffInSeconds < 3600) {
+      return t('progress.minutesAgo', { count: Math.floor(diffInSeconds / 60) });
+    }
+    if (diffInSeconds < 86400) {
+      return t('progress.hoursAgo', { count: Math.floor(diffInSeconds / 3600) });
+    }
+    return t('progress.daysAgo', { count: Math.floor(diffInSeconds / 86400) });
   };
 
   return (
@@ -105,9 +111,9 @@ const ProgressFloatingWindow: React.FC<ProgressFloatingWindowProps> = ({
           onClick={() => setIsMinimized(!isMinimized)}
         >
           <div className="flex items-center gap-2">
-            <span className="font-bold text-sm">抓取进度</span>
+            <span className="font-bold text-sm">{t('progress.title')}</span>
             <span className="text-xs opacity-70">
-              ({activeTasks.length} 进行中, {completedTasks.length} 已完成)
+              ({t('progress.activeCompleted', { active: activeTasks.length, completed: completedTasks.length })})
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -126,7 +132,7 @@ const ProgressFloatingWindow: React.FC<ProgressFloatingWindowProps> = ({
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                清除
+                {t('progress.clear')}
               </motion.button>
             )}
             <motion.button
@@ -290,7 +296,7 @@ const ProgressFloatingWindow: React.FC<ProgressFloatingWindowProps> = ({
                     className="p-4 text-center text-xs opacity-60"
                     style={{ color: 'rgba(19, 0, 0, 1)' }}
                   >
-                    暂无任务
+                    {t('progress.empty')}
                   </div>
                 )}
               </div>

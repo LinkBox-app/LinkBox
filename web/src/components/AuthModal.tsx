@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence, type Variants, type AnimationGeneratorType } from 'framer-motion';
 import { login, register } from '../api/methods/auth.methods';
 import type { UserLogin, UserRegister } from '../api/types/auth.types';
+import { useI18n } from '../contexts/I18nContext';
 import { AUTH_TOKEN_KEY, LOGIN_FLAG_KEY } from '../storage-key.constant';
 import toast from '../utils/toast';
 import LoadingDots from './LoadingDots';
@@ -13,6 +14,7 @@ interface AuthModalProps {
 }
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => {
+  const { t } = useI18n();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -60,22 +62,22 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
     const newErrors: Record<string, string> = {};
 
     if (!formData.username.trim()) {
-      newErrors.username = '用户名不能为空';
+      newErrors.username = t('auth.usernameEmpty');
     } else if (formData.username.length < 3 || formData.username.length > 50) {
-      newErrors.username = '用户名长度必须在3-50个字符之间';
+      newErrors.username = t('auth.usernameLength');
     }
 
     if (!formData.password.trim()) {
-      newErrors.password = '密码不能为空';
+      newErrors.password = t('auth.passwordEmpty');
     } else if (formData.password.length < 6 || formData.password.length > 100) {
-      newErrors.password = '密码长度必须在6-100个字符之间';
+      newErrors.password = t('auth.passwordLength');
     }
 
     if (mode === 'register') {
       if (!formData.confirmPassword.trim()) {
-        newErrors.confirmPassword = '请确认密码';
+        newErrors.confirmPassword = t('auth.confirmPasswordEmpty');
       } else if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = '两次输入的密码不一致';
+        newErrors.confirmPassword = t('auth.confirmPasswordMismatch');
       }
     }
 
@@ -113,7 +115,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
       localStorage.setItem(AUTH_TOKEN_KEY, response.access_token);
       localStorage.setItem(LOGIN_FLAG_KEY, 'true');
 
-      toast.success(mode === 'login' ? '登录成功！' : '注册成功！');
+      toast.success(mode === 'login' ? t('auth.loginSuccess') : t('auth.registerSuccess'));
       
       // 重置表单
       setFormData({ username: '', password: '', confirmPassword: '' });
@@ -124,7 +126,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
       onClose();
     } catch (error: any) {
       console.error(`${mode === 'login' ? '登录' : '注册'}失败:`, error);
-      toast.error(error.message || `${mode === 'login' ? '登录' : '注册'}失败，请重试`);
+      toast.error(error.message || (mode === 'login' ? t('auth.loginError') : t('auth.registerError')));
     } finally {
       setIsLoading(false);
     }
@@ -187,13 +189,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
             className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2"
             style={{ color: 'rgba(19, 0, 0, 1)' }}
           >
-            {mode === 'login' ? '登录' : '注册'}
+            {mode === 'login' ? t('auth.loginTitle') : t('auth.registerTitle')}
           </h2>
           <p 
             className="text-xs sm:text-sm opacity-70"
             style={{ color: 'rgba(19, 0, 0, 1)' }}
           >
-            {mode === 'login' ? '欢迎回来！请输入您的账号信息' : '创建新账号，开始使用LinkBox'}
+            {mode === 'login' ? t('auth.loginSubtitle') : t('auth.registerSubtitle')}
           </p>
         </div>
 
@@ -205,7 +207,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
               className="block text-xs sm:text-sm font-bold mb-1 sm:mb-2"
               style={{ color: 'rgba(19, 0, 0, 1)' }}
             >
-              用户名 *
+              {t('auth.usernameLabel')}
             </label>
             <motion.input
               type="text"
@@ -219,7 +221,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                 fontFamily: '"Menlo", "Consolas", "Courier_New", "Hannotate_SC", "DengXian", monospace',
                 boxShadow: errors.username ? '3px 3px 0px rgba(239, 68, 68, 0.3)' : '3px 3px 0px rgba(19, 0, 0, 0.2)'
               }}
-              placeholder={mode === 'login' ? '请输入用户名' : '3-50个字符'}
+              placeholder={mode === 'login' ? t('auth.usernameLoginPlaceholder') : t('auth.usernameRegisterPlaceholder')}
               disabled={isLoading}
               maxLength={50}
               whileFocus={{ 
@@ -241,7 +243,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
               className="block text-xs sm:text-sm font-bold mb-1 sm:mb-2"
               style={{ color: 'rgba(19, 0, 0, 1)' }}
             >
-              密码 *
+              {t('auth.passwordLabel')}
             </label>
             <motion.input
               type="password"
@@ -255,7 +257,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                 fontFamily: '"Menlo", "Consolas", "Courier_New", "Hannotate_SC", "DengXian", monospace',
                 boxShadow: errors.password ? '3px 3px 0px rgba(239, 68, 68, 0.3)' : '3px 3px 0px rgba(19, 0, 0, 0.2)'
               }}
-              placeholder={mode === 'login' ? '请输入密码' : '6-100个字符'}
+              placeholder={mode === 'login' ? t('auth.passwordLoginPlaceholder') : t('auth.passwordRegisterPlaceholder')}
               disabled={isLoading}
               maxLength={100}
               whileFocus={{ 
@@ -278,7 +280,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                 className="block text-xs sm:text-sm font-bold mb-1 sm:mb-2"
                 style={{ color: 'rgba(19, 0, 0, 1)' }}
               >
-                确认密码 *
+                {t('auth.confirmPasswordLabel')}
               </label>
               <motion.input
                 type="password"
@@ -292,7 +294,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                   fontFamily: '"Menlo", "Consolas", "Courier_New", "Hannotate_SC", "DengXian", monospace',
                   boxShadow: errors.confirmPassword ? '3px 3px 0px rgba(239, 68, 68, 0.3)' : '3px 3px 0px rgba(19, 0, 0, 0.2)'
                 }}
-                placeholder="请再次输入密码"
+                placeholder={t('auth.confirmPasswordPlaceholder')}
                 disabled={isLoading}
                 maxLength={100}
                 whileFocus={{ 
@@ -334,9 +336,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
             }}
           >
             {isLoading ? (
-              <LoadingDots text={mode === 'login' ? '登录中' : '注册中'} />
+              <LoadingDots text={mode === 'login' ? t('auth.loggingIn') : t('auth.registering')} />
             ) : (
-              mode === 'login' ? '登录' : '注册'
+              mode === 'login' ? t('auth.loginTitle') : t('auth.registerTitle')
             )}
           </motion.button>
         </form>
@@ -347,7 +349,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
             className="text-xs sm:text-sm mb-2"
             style={{ color: 'rgba(19, 0, 0, 1)' }}
           >
-            {mode === 'login' ? '还没有账号？' : '已有账号？'}
+            {mode === 'login' ? t('auth.noAccount') : t('auth.hasAccount')}
           </p>
           <motion.button
             onClick={handleModeSwitch}
@@ -371,7 +373,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
               boxShadow: '1px 1px 0px rgba(19, 0, 0, 1)'
             }}
           >
-            {mode === 'login' ? '立即注册 →' : '← 返回登录'}
+            {mode === 'login' ? t('auth.switchToRegister') : t('auth.switchToLogin')}
           </motion.button>
         </div>
           </motion.div>

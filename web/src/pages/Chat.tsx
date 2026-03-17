@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import LoadingDots from '../components/LoadingDots';
 import ResourceCard, { type Resource } from '../components/ResourceCard';
 import ToolCallDisplay from '../components/ToolCallDisplay';
+import { useI18n } from '../contexts/I18nContext';
 import { useAgentStream, type ToolCallInfo, type ToolProgress } from '../hooks/useAgentStream';
 import { useAuth } from '../hooks/useAuth';
 import toast from '../utils/toast';
@@ -30,6 +31,7 @@ const getChatMessagesKey = (userId?: number) =>
 
 const Chat: React.FC = () => {
   const { user } = useAuth();
+  const { locale, t } = useI18n();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const {
@@ -52,7 +54,6 @@ const Chat: React.FC = () => {
     if (savedMessages) {
       try {
         const parsedMessages = JSON.parse(savedMessages);
-        // 确保timestamp是Date对象
         const messagesWithDates = parsedMessages.map((msg: any) => ({
           ...msg,
           timestamp: new Date(msg.timestamp)
@@ -131,13 +132,12 @@ const Chat: React.FC = () => {
       await sendAgentMessage(chatMessages);
     } catch (error: any) {
       console.error('Agent对话失败:', error);
-      toast.error(error.message || 'Agent对话失败，请重试');
+      toast.error(error.message || t('chat.sendError'));
       
-      // 更新AI消息为错误信息
       setMessages(prev => 
         prev.map(msg => 
           msg.id === aiMessageId 
-            ? { ...msg, content: '抱歉，我遇到了一些问题，请稍后重试。', isThinking: false }
+            ? { ...msg, content: t('chat.genericFailure'), isThinking: false }
             : msg
         )
       );
@@ -145,7 +145,7 @@ const Chat: React.FC = () => {
   };
 
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('zh-CN', {
+    return date.toLocaleTimeString(locale, {
       hour: '2-digit',
       minute: '2-digit',
     });
@@ -256,10 +256,10 @@ const Chat: React.FC = () => {
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex-1 min-w-0">
             <h1 className="text-lg sm:text-xl md:text-2xl font-bold mb-1 sm:mb-2 truncate" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-              LinkBot
+              {t('chat.title')}
             </h1>
             <p className="text-xs sm:text-sm opacity-70 truncate" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-              您好，您想找什么？
+              {t('chat.subtitle')}
             </p>
           </div>
           
@@ -283,7 +283,7 @@ const Chat: React.FC = () => {
                       boxShadow: '2px 2px 0 rgba(19, 0, 0, 1)',
                     }}
                   >
-                    <span className="hidden sm:inline">取消</span>
+                    <span className="hidden sm:inline">{t('chat.cancel')}</span>
                     <span className="sm:hidden">×</span>
                   </motion.button>
                 )}
@@ -303,7 +303,7 @@ const Chat: React.FC = () => {
                     boxShadow: '2px 2px 0 rgba(19, 0, 0, 1)',
                   }}
                 >
-                  <span className="hidden sm:inline">清空对话</span>
+                  <span className="hidden sm:inline">{t('chat.clearChat')}</span>
                   <span className="sm:hidden">🗑</span>
                 </motion.button>
               </>
@@ -325,11 +325,11 @@ const Chat: React.FC = () => {
                   borderColor: 'rgba(19, 0, 0, 1)',
                   color: 'rgba(19, 0, 0, 1)',
                 }}
-              >
+                >
                 <div className="text-2xl sm:text-3xl md:text-4xl mb-2 sm:mb-3 md:mb-4">🤖</div>
-                <h2 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2">AI助手等待中</h2>
+                <h2 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2">{t('chat.emptyTitle')}</h2>
                 <p className="text-xs sm:text-sm opacity-70">
-                  输入您的问题或想法，开始与AI对话
+                  {t('chat.emptyDescription')}
                 </p>
               </div>
             </div>
@@ -451,7 +451,7 @@ const Chat: React.FC = () => {
                         }}
                       >
                         <div className="text-xs sm:text-sm opacity-70">
-                          {message.isThinking ? '🧠 AI正在思考中...' : 'AI正在思考中...'}
+                          {message.isThinking ? `🧠 ${t('chat.thinking')}` : t('chat.thinking')}
                         </div>
                       </div>
                     )}
@@ -481,7 +481,7 @@ const Chat: React.FC = () => {
                         boxShadow: '2px 2px 0 rgba(19, 0, 0, 1)',
                       }}
                     >
-                      我
+                      {t('chat.userAvatar')}
                     </motion.div>
                   )}
                 </motion.div>
@@ -605,7 +605,7 @@ const Chat: React.FC = () => {
             <textarea
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              placeholder="输入您的问题或想法..."
+              placeholder={t('chat.inputPlaceholder')}
               className="flex-1 p-2 sm:p-3 md:p-4 border-2 border-solid focus:outline-none transition-all text-sm sm:text-base resize-none"
               style={{
                 backgroundColor: 'rgba(255, 248, 232, 1)',
@@ -642,19 +642,19 @@ const Chat: React.FC = () => {
               }}
             >
               {isAgentStreaming ? (
-                <div className="flex items-center gap-1 sm:gap-2">
+              <div className="flex items-center gap-1 sm:gap-2">
                   <LoadingDots text="" />
-                  <span className="hidden sm:inline">发送中</span>
+                  <span className="hidden sm:inline">{t('chat.sending')}</span>
                 </div>
               ) : (
-                '发送'
+                t('chat.send')
               )}
             </motion.button>
           </form>
           
           <div className="mt-1 sm:mt-2 text-xs opacity-60 text-center sm:text-left" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-            <span className="hidden sm:inline">按 Enter 发送，Shift + Enter 换行</span>
-            <span className="sm:hidden">点击发送按钮或按 Enter 发送</span>
+            <span className="hidden sm:inline">{t('chat.enterHintDesktop')}</span>
+            <span className="sm:hidden">{t('chat.enterHintMobile')}</span>
           </div>
         </div>
       </div>

@@ -7,6 +7,7 @@ import type {
     ResourcePreviewRequest
 } from '../api/types/resource.types';
 import { useResources } from '../contexts/ResourceContext';
+import { useI18n } from '../contexts/I18nContext';
 import toast from '../utils/toast';
 import LoadingDots from './LoadingDots';
 import { useProgress } from '../contexts/ProgressContext';
@@ -32,6 +33,7 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
   onSuccess,
   initialData
 }) => {
+  const { t } = useI18n();
   const [step, setStep] = useState<ModalStep>(initialData ? 'edit' : 'note');
   const [isLoading, setIsLoading] = useState(false);
   const [note, setNote] = useState('');
@@ -94,7 +96,7 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
 
   const handlePreview = () => {
     if (!url.trim()) {
-      toast.error('URL不能为空');
+      toast.error(t('bookmark.urlEmpty'));
       return;
     }
 
@@ -111,15 +113,15 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
 
     // 创建进度任务
     const taskId = addTask({
-      title: '抓取并保存链接',
+      title: t('bookmark.taskTitle'),
       url: url,
       status: 'pending',
       progress: 0,
-      message: '准备开始抓取并入库...'
+      message: t('bookmark.taskPreparing')
     });
 
     handleClose();
-    toast.success('已加入后台任务，抓取完成后会自动入库');
+    toast.success(t('bookmark.taskQueued'));
 
     void createResourcePreviewAsync(request, (progress) => {
         updateTask(taskId, {
@@ -133,7 +135,7 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
         updateTask(taskId, {
           status: 'processing',
           progress: 95,
-          message: '正在保存到收藏夹...'
+          message: t('bookmark.taskSaving')
         });
 
         return createBookmark({
@@ -151,25 +153,24 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
         updateTask(taskId, {
           status: 'completed',
           progress: 100,
-          message: '抓取完成，已自动保存到收藏夹',
+          message: t('bookmark.taskCompleted'),
           result: {
             previewData: preview,
             savedResource: createdResource,
           }
         });
 
-        toast.success('抓取完成，链接和标签已自动入库');
+        toast.success(t('bookmark.taskCompletedToast'));
       })
       .catch((error: any) => {
         console.error('生成预览失败:', error);
-        toast.error(error.message || '抓取或自动入库失败，请重试');
+        toast.error(error.message || t('bookmark.taskFailedToast'));
 
-        // 标记任务失败
         updateTask(taskId, {
           status: 'error',
           progress: 0,
-          message: '抓取或入库失败',
-          error: error.message || '抓取或自动入库失败'
+          message: t('bookmark.taskFailed'),
+          error: error.message || t('bookmark.taskFailedToast')
         });
       });
   };
@@ -201,17 +202,17 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
 
   const handleSave = async () => {
     if (!editData.title.trim()) {
-      toast.error('标题不能为空');
+      toast.error(t('bookmark.titleEmpty'));
       return;
     }
     
     if (!editData.digest.trim()) {
-      toast.error('摘要不能为空');
+      toast.error(t('bookmark.digestEmpty'));
       return;
     }
     
     if (editData.tags.length === 0) {
-      toast.error('至少需要一个标签');
+      toast.error(t('bookmark.tagRequired'));
       return;
     }
 
@@ -233,12 +234,12 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
       
       const createdResource = await createBookmark(request);
       await refreshHomeData();
-      toast.success('收藏成功！');
+      toast.success(t('bookmark.saveSuccess'));
       handleClose();
       onSuccess(createdResource);
     } catch (error: any) {
       console.error('创建资源失败:', error);
-      toast.error(error.message || '收藏失败，请重试');
+      toast.error(error.message || t('bookmark.saveError'));
     } finally {
       setIsLoading(false);
     }
@@ -247,12 +248,12 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
   const renderNoteStep = () => (
     <>
       <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-        收藏链接
+        {t('bookmark.noteTitle')}
       </h3>
       
       <div className="mb-3 sm:mb-4">
         <label className="block text-xs sm:text-sm font-bold mb-1 sm:mb-2" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-          链接地址
+          {t('bookmark.urlLabel')}
         </label>
         <div 
           className="p-2 sm:p-3 border-2 border-solid text-xs sm:text-sm break-all"
@@ -268,12 +269,12 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
 
       <div className="mb-4 sm:mb-6">
         <label className="block text-xs sm:text-sm font-bold mb-1 sm:mb-2" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-          备注说明 (可选)
+          {t('bookmark.noteLabel')}
         </label>
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="为这个链接添加一些说明，帮助AI更好地生成标题和摘要..."
+          placeholder={t('bookmark.notePlaceholder')}
           className="w-full p-2 sm:p-3 border-2 border-solid focus:outline-none focus:border-orange-400 transition-colors resize-none text-sm"
           style={{
             backgroundColor: 'rgba(255, 255, 255, 1)',
@@ -312,7 +313,7 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
           boxShadow: '2px 2px 0px rgba(19, 0, 0, 0.5)'
         }}
       >
-        取消
+        {t('common.cancel')}
       </motion.button>
       <motion.button
         onClick={handlePreview}
@@ -336,7 +337,7 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
           boxShadow: '2px 2px 0px rgba(19, 0, 0, 1)'
         }}
       >
-        {isLoading ? <LoadingDots text="生成预览中" /> : '生成预览'}
+        {isLoading ? <LoadingDots text={t('bookmark.previewLoading')} /> : t('bookmark.generatePreview')}
       </motion.button>
       </div>
     </>
@@ -345,14 +346,14 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
   const renderEditStep = () => (
     <>
       <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-        编辑收藏信息
+        {t('bookmark.editTitle')}
       </h3>
 
       <div className="max-h-72 sm:max-h-96 overflow-y-auto mb-4 sm:mb-6 pr-1 sm:pr-2 scrollbar-hide">
         {/* 标题 */}
         <div className="mb-3 sm:mb-4">
           <label className="block text-xs sm:text-sm font-bold mb-1 sm:mb-2" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-            标题 *
+            {t('bookmark.titleLabel')}
           </label>
           <input
             type="text"
@@ -373,7 +374,7 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
         {/* 摘要 */}
         <div className="mb-3 sm:mb-4">
           <label className="block text-xs sm:text-sm font-bold mb-1 sm:mb-2" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-            摘要 *
+            {t('bookmark.digestLabel')}
           </label>
           <textarea
             value={editData.digest}
@@ -393,7 +394,7 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
         {/* 标签 */}
         <div className="mb-3 sm:mb-4">
           <label className="block text-xs sm:text-sm font-bold mb-1 sm:mb-2" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-            标签 *
+            {t('bookmark.tagsLabel')}
           </label>
           
           {/* 已有标签 */}
@@ -440,7 +441,7 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="输入标签名称"
+              placeholder={t('bookmark.tagPlaceholder')}
               className="flex-1 p-2 border-2 border-solid focus:outline-none focus:border-orange-400 transition-colors text-sm"
               style={{
                 backgroundColor: 'rgba(255, 255, 255, 1)',
@@ -471,7 +472,7 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
                 boxShadow: '1px 1px 0px rgba(19, 0, 0, 0.5)'
               }}
             >
-              添加
+              {t('bookmark.addTag')}
             </motion.button>
           </div>
         </div>
@@ -499,7 +500,7 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
             boxShadow: '2px 2px 0px rgba(19, 0, 0, 0.5)'
           }}
         >
-          返回
+          {t('bookmark.back')}
         </motion.button>
         <motion.button
           onClick={handleSave}
@@ -523,7 +524,7 @@ const BookmarkModal: React.FC<BookmarkModalProps> = ({
             boxShadow: '2px 2px 0px rgba(19, 0, 0, 1)'
           }}
         >
-          {isLoading ? <LoadingDots text="保存中" /> : '保存收藏'}
+          {isLoading ? <LoadingDots text={t('bookmark.saving')} /> : t('bookmark.saveBookmark')}
         </motion.button>
       </div>
     </>

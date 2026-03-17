@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence, type Variants, type AnimationGeneratorType } from 'framer-motion';
+import { useI18n } from '../contexts/I18nContext';
 import { setGlobalToast } from '../utils/toast';
 
 interface ToastItem {
@@ -29,6 +30,7 @@ const Toast: React.FC<{ toast: ToastItem; onRemove: (id: string) => void }> = ({
   toast,
   onRemove,
 }) => {
+  const { t } = useI18n();
   React.useEffect(() => {
     if (toast.duration !== 0) {
       const timer = setTimeout(() => {
@@ -138,7 +140,7 @@ const Toast: React.FC<{ toast: ToastItem; onRemove: (id: string) => void }> = ({
         <motion.button
           onClick={() => onRemove(toast.id)}
           className="ml-2 text-lg font-bold transition-all flex-shrink-0"
-          aria-label="关闭"
+          aria-label={t('system.close')}
           style={{ color: 'rgba(19, 0, 0, 1)' }}
           whileHover={{ scale: 1.2, rotate: 90 }}
           whileTap={{ scale: 0.8 }}

@@ -3,12 +3,14 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import IconSvg from '../images/icon.svg';
 import ProgressFloatingWindow from './ProgressFloatingWindow';
 import BookmarkModal from './BookmarkModal';
+import { useI18n } from '../contexts/I18nContext';
 import { useProgress } from '../contexts/ProgressContext';
 import { useResources } from '../contexts/ResourceContext';
 import toast from '../utils/toast';
 
 const Layout: React.FC = () => {
   const location = useLocation();
+  const { t } = useI18n();
   const { tasks, removeTask, clearCompleted } = useProgress();
   const { fetchList } = useResources();
   const [showEditModal, setShowEditModal] = useState(false);
@@ -20,7 +22,7 @@ const Layout: React.FC = () => {
   const handlePreviewComplete = (previewData: any, url: string) => {
     setEditModalData({ url, previewData });
     setShowEditModal(true);
-    toast.success('点击完成预览，可以编辑收藏信息');
+    toast.success(t('layout.previewReady'));
   };
 
   const handleEditModalClose = () => {
@@ -47,7 +49,7 @@ const Layout: React.FC = () => {
         <Link to="/about" className="flex items-center gap-2 sm:gap-4 text-xl sm:text-3xl font-bold hover:opacity-70 transition-opacity"
           style={{ color: 'rgba(19, 0, 0, 1)' }}>
           <div className="bg-[rgba(255,248,232,1)] border-2 border-[rgba(19,0,0,1)] rounded-2xl shadow-[2px_2px_0_rgba(19,0,0,1)] sm:shadow-[4px_4px_0_rgba(19,0,0,1)]">
-            <img src={IconSvg} alt="LinkBox Icon" className="w-10 h-10 sm:w-13 sm:h-13" />
+            <img src={IconSvg} alt={t('layout.iconAlt')} className="w-10 h-10 sm:w-13 sm:h-13" />
           </div>
           <span className="hidden xs:inline">LinkBox</span>
         </Link>
@@ -66,7 +68,7 @@ const Layout: React.FC = () => {
               color: 'rgba(19, 0, 0, 1)',
             }}
           >
-            <span className="hidden sm:inline">首页</span>
+            <span className="hidden sm:inline">{t('layout.home')}</span>
             <span className="sm:hidden">🏠</span>
           </Link>
           <Link 
@@ -82,7 +84,7 @@ const Layout: React.FC = () => {
               color: 'rgba(19, 0, 0, 1)',
             }}
           >
-            <span className="hidden sm:inline">AI对话</span>
+            <span className="hidden sm:inline">{t('layout.chat')}</span>
             <span className="sm:hidden">🤖</span>
           </Link>
           <Link 
@@ -98,7 +100,7 @@ const Layout: React.FC = () => {
               color: 'rgba(19, 0, 0, 1)',
             }}
           >
-            <span className="hidden sm:inline">设置</span>
+            <span className="hidden sm:inline">{t('layout.settings')}</span>
             <span className="sm:hidden">⚙️</span>
           </Link>
         </div>

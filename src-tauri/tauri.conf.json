@@ -1,0 +1,42 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "LinkBox",
+  "version": "0.1.0",
+  "identifier": "com.jackey.linkbox",
+  "build": {
+    "beforeDevCommand": "npm run dev:web",
+    "beforeBuildCommand": "npm run build:web",
+    "devUrl": "http://127.0.0.1:1420",
+    "frontendDist": "../web/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "LinkBox",
+        "width": 1440,
+        "height": 960,
+        "minWidth": 1100,
+        "minHeight": 760,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "externalBin": [
+      "binaries/linkbox-server"
+    ]
+  }
+}

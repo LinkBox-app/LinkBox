@@ -1,0 +1,11 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default capability for the LinkBox desktop window",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "opener:default",
+    "shell:default"
+  ]
+}

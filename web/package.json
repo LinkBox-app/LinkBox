@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.8.0",
+    "@tauri-apps/plugin-opener": "^2.4.0",
     "@tailwindcss/typography": "^0.5.16",
     "@tailwindcss/vite": "^4.1.11",
     "alova": "^3.3.4",

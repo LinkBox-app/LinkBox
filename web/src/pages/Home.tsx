@@ -7,11 +7,14 @@ import DeleteTagModal from '../components/DeleteTagModal';
 import DeleteResourceModal from '../components/DeleteResourceModal';
 import EditResourceModal from '../components/EditResourceModal';
 import LoadingDots from '../components/LoadingDots';
+import { useI18n } from '../contexts/I18nContext';
 import { useAuth } from '../hooks/useAuth';
 import { useResources } from '../contexts/ResourceContext';
+import { openExternal } from '../utils/openExternal';
 import toast from '../utils/toast';
 
 const Home: React.FC = () => {
+  const { t, formatDate } = useI18n();
   const { isLoading: authLoading } = useAuth();
   const {
     currentPage,
@@ -53,7 +56,7 @@ const Home: React.FC = () => {
   const handleBookmarkSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!bookmarkUrl.trim()) {
-      toast.error('请输入有效的链接');
+      toast.error(t('home.invalidLink'));
       return;
     }
     
@@ -61,7 +64,7 @@ const Home: React.FC = () => {
       new URL(bookmarkUrl);
       setShowBookmarkModal(true);
     } catch {
-      toast.error('请输入有效的URL格式');
+      toast.error(t('home.invalidUrl'));
     }
   };
 
@@ -114,21 +117,13 @@ const Home: React.FC = () => {
     void fetchList(selectedTag, currentPage);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('zh-CN', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
-
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center dot-pattern"
         style={{ backgroundColor: 'rgba(255, 239, 215, 1)' }}>
         <div className="text-center">
           <LoadingDots 
-            text="初始化中" 
+            text={t('home.initializing')}
             className="terminal-text text-xl" 
           />
         </div>
@@ -157,7 +152,7 @@ const Home: React.FC = () => {
               LinkBox
             </h1>
             <p className="text-xs sm:text-sm opacity-70" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-              欢迎回来！收藏您喜欢的链接
+              {t('home.welcome')}
             </p>
           </div>
           
@@ -166,7 +161,7 @@ const Home: React.FC = () => {
               type="url"
               value={bookmarkUrl}
               onChange={(e) => setBookmarkUrl(e.target.value)}
-              placeholder="输入要收藏的链接 (例如: https://github.com/example/repo)"
+              placeholder={t('home.bookmarkPlaceholder')}
               className="flex-1 p-2 sm:p-3 border-2 border-solid shadow-[3px_3px_0_rgba(19,0,0,1)] sm:shadow-[4px_4px_0_rgba(19,0,0,1)] focus:outline-none focus:shadow-[4px_4px_0_rgba(19,0,0,1)] sm:focus:shadow-[6px_6px_0_rgba(19,0,0,1)] focus:translate-x-[-1px] focus:translate-y-[-1px] sm:focus:translate-x-[-2px] sm:focus:translate-y-[-2px] transition-all text-sm sm:text-base"
               style={{
                 backgroundColor: 'rgba(255, 248, 232, 1)',
@@ -185,7 +180,7 @@ const Home: React.FC = () => {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              收藏
+              {t('home.bookmarkAction')}
             </motion.button>
           </form>
         </div>
@@ -197,7 +192,7 @@ const Home: React.FC = () => {
         <div className="mb-4 sm:mb-6">
           <div className="flex items-center justify-between mb-3 sm:mb-4">
             <h2 className="text-base sm:text-lg font-bold" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-              标签分类
+              {t('home.tagSectionTitle')}
             </h2>
             <motion.button
               onClick={() => setShowCreateTagModal(true)}
@@ -210,13 +205,13 @@ const Home: React.FC = () => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              + 新建标签
+              {t('home.createTag')}
             </motion.button>
           </div>
           
           {isLoadingTags ? (
             <div className="flex items-center">
-              <LoadingDots text="加载标签中" className="terminal-text" />
+              <LoadingDots text={t('home.loadingTags')} className="terminal-text" />
             </div>
           ) : tags.length === 0 ? (
             <div 
@@ -227,7 +222,7 @@ const Home: React.FC = () => {
                 color: 'rgba(19, 0, 0, 1)',
               }}
             >
-              <p className="text-center">暂无标签，收藏您的第一个链接吧！</p>
+              <p className="text-center">{t('home.emptyTags')}</p>
             </div>
           ) : (
             <div className="flex flex-col gap-2 sm:gap-3">
@@ -253,7 +248,7 @@ const Home: React.FC = () => {
                     }}
                     onClick={() => selectTag(null)}
                   >
-                    全部资源
+                    {t('home.allResources')}
                   </motion.div>
 
                   {tags.map((tag) => (
@@ -294,7 +289,7 @@ const Home: React.FC = () => {
                           backgroundColor: 'rgba(239, 68, 68, 1)',
                           color: 'rgba(255, 255, 255, 1)',
                         }}
-                        title={`删除标签 ${tag.name}`}
+                        title={t('home.deleteTagTitle', { name: tag.name })}
                       >
                         ×
                       </button>
@@ -314,7 +309,7 @@ const Home: React.FC = () => {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  + 新建
+                  {t('home.createShort')}
                 </motion.button>
               </div>
 
@@ -327,7 +322,7 @@ const Home: React.FC = () => {
                     color: 'rgba(19, 0, 0, 1)',
                   }}
                 >
-                  <p className="text-center">暂无标签，收藏您的第一个链接吧！</p>
+                  <p className="text-center">{t('home.emptyTags')}</p>
                 </div>
               )}
             </div>
@@ -338,16 +333,18 @@ const Home: React.FC = () => {
         <div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 sm:mb-4 gap-2 sm:gap-0">
               <h3 className="text-base sm:text-lg font-bold" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-                {selectedTag ? `#${selectedTag} 资源` : '全部资源'}
+                {selectedTag
+                  ? t('home.resourceSectionTitle', { tag: selectedTag })
+                  : t('home.allResources')}
               </h3>
               <span className="text-xs sm:text-sm opacity-70" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-                共 {pagination.total} 个资源
+                {t('home.totalResources', { count: pagination.total })}
               </span>
             </div>
 
             {isLoadingResources ? (
               <div className="flex items-center justify-center py-8">
-                <LoadingDots text="加载资源中" className="terminal-text" />
+                <LoadingDots text={t('home.loadingResources')} className="terminal-text" />
               </div>
             ) : resources.length === 0 ? (
               <div 
@@ -358,7 +355,7 @@ const Home: React.FC = () => {
                   color: 'rgba(19, 0, 0, 1)',
                 }}
               >
-                <p>{selectedTag ? '该标签下暂无资源' : '暂无收藏资源，先去收藏一些吧！'}</p>
+                <p>{selectedTag ? t('home.emptyResourcesInTag') : t('home.emptyResources')}</p>
               </div>
             ) : (
               <>
@@ -380,7 +377,9 @@ const Home: React.FC = () => {
                           borderColor: 'rgba(19, 0, 0, 1)',
                           color: 'rgba(19, 0, 0, 1)',
                         }}
-                        onClick={() => window.open(resource.url, '_blank')}
+                        onClick={() => {
+                          void openExternal(resource.url);
+                        }}
                       >
                       <div className="flex items-start justify-between mb-1.5 sm:mb-2">
                         <h4 className="font-bold text-base sm:text-lg leading-tight pr-2 sm:pr-4">
@@ -423,7 +422,11 @@ const Home: React.FC = () => {
                           rel="noopener noreferrer"
                           className="text-xs sm:text-sm hover:opacity-70 transition-opacity break-all sm:break-normal"
                           style={{ color: 'rgba(255, 111, 46, 1)' }}
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            void openExternal(resource.url);
+                          }}
                         >
                           {resource.url.length > (isMobile ? 30 : 50) 
                             ? `${resource.url.substring(0, isMobile ? 30 : 50)}...` 
@@ -444,7 +447,7 @@ const Home: React.FC = () => {
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                           >
-                            🗑️ 删除
+                            {t('home.deleteResource')}
                           </motion.button>
                           <motion.button
                             onClick={(e) => {
@@ -460,7 +463,7 @@ const Home: React.FC = () => {
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                           >
-                            ✏️ 编辑
+                            {t('home.editResource')}
                           </motion.button>
                         </div>
                       </div>
@@ -488,7 +491,10 @@ const Home: React.FC = () => {
                     </motion.button>
                     
                     <span className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-                      {pagination.page} / {pagination.pages}
+                      {t('home.pageIndicator', {
+                        page: pagination.page,
+                        pages: pagination.pages,
+                      })}
                     </span>
                     
                     <motion.button

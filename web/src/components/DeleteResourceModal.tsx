@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence, type Variants, type AnimationGeneratorType } from 'framer-motion';
 import type { ResourceResponse } from '../api/types/resource.types';
+import { useI18n } from '../contexts/I18nContext';
 import { useResources } from '../contexts/ResourceContext';
 import toast from '../utils/toast';
 import LoadingDots from './LoadingDots';
@@ -18,6 +19,7 @@ const DeleteResourceModal: React.FC<DeleteResourceModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { t } = useI18n();
   const [isLoading, setIsLoading] = useState(false);
   const {
     currentPage,
@@ -92,12 +94,12 @@ const DeleteResourceModal: React.FC<DeleteResourceModalProps> = ({
         await refreshResources(selectedTag, currentPage);
       }
 
-      toast.success('资源删除成功！');
+      toast.success(t('modals.deleteResourceSuccess'));
       onClose();
       onSuccess();
     } catch (error: any) {
       console.error('删除资源失败:', error);
-      toast.error(error.message || '删除资源失败，请重试');
+      toast.error(error.message || t('modals.deleteResourceError'));
     } finally {
       setIsLoading(false);
     }
@@ -142,7 +144,7 @@ const DeleteResourceModal: React.FC<DeleteResourceModalProps> = ({
                 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4"
                 style={{ color: 'rgba(19, 0, 0, 1)' }}
               >
-                删除资源确认
+                {t('modals.deleteResourceTitle')}
               </h3>
 
               <div className="mb-4 sm:mb-6">
@@ -150,7 +152,7 @@ const DeleteResourceModal: React.FC<DeleteResourceModalProps> = ({
                   className="text-xs sm:text-sm mb-2 sm:mb-3"
                   style={{ color: 'rgba(19, 0, 0, 1)' }}
                 >
-                  您确定要删除资源
+                  {t('modals.deleteResourcePromptPrefix')}
                   <motion.span
                     className="px-2 py-1 mx-1 border-2 border-solid font-bold inline-block text-xs sm:text-sm"
                     style={{
@@ -165,7 +167,7 @@ const DeleteResourceModal: React.FC<DeleteResourceModalProps> = ({
                   >
                     {resource.title}
                   </motion.span>
-                  吗？
+                  {t('modals.deleteResourcePromptSuffix')}
                 </p>
                 <motion.div
                   className="p-2 sm:p-3 border-2 border-solid text-xs font-semibold"
@@ -179,7 +181,7 @@ const DeleteResourceModal: React.FC<DeleteResourceModalProps> = ({
                   initial="initial"
                   animate="animate"
                 >
-                  ⚠️ 删除后将从数据库中移除这条收藏，并同步更新相关标签分类，此操作不可恢复。
+                  {t('modals.deleteResourceWarning')}
                 </motion.div>
               </div>
 
@@ -206,7 +208,7 @@ const DeleteResourceModal: React.FC<DeleteResourceModalProps> = ({
                     boxShadow: '2px 2px 0px rgba(19, 0, 0, 0.5)',
                   }}
                 >
-                  取消
+                  {t('common.cancel')}
                 </motion.button>
                 <motion.button
                   type="button"
@@ -231,7 +233,7 @@ const DeleteResourceModal: React.FC<DeleteResourceModalProps> = ({
                     boxShadow: '2px 2px 0px rgba(19, 0, 0, 1)',
                   }}
                 >
-                  {isLoading ? <LoadingDots text="删除中" /> : '确认删除'}
+                  {isLoading ? <LoadingDots text={t('modals.deleteLoading')} /> : t('modals.confirmDelete')}
                 </motion.button>
               </div>
             </div>

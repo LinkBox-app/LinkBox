@@ -1,0 +1,16 @@
+{
+  "name": "linkbox-desktop",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev:web": "npm --prefix web run dev -- --host 127.0.0.1 --port 1420",
+    "build:web": "npm --prefix web run build",
+    "build:sidecar": "python3 scripts/build_sidecar.py",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.9.1"
+  }
+}

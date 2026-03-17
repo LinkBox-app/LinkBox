@@ -1,9 +1,9 @@
 import { createAlova } from "alova";
 import adapterFetch from "alova/fetch";
 import ReactHook from "alova/react";
+import { getRuntimeConfig } from "../runtime";
 
-export const BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:7032";
+export const BASE_URL = getRuntimeConfig().apiBaseUrl;
 
 const alova = createAlova({
   requestAdapter: adapterFetch(),

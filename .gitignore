@@ -1,7 +1,10 @@
 .DS_Store
 docs
 .venv/
+.venv-desktop/
 **/.venv/
+.pyinstaller/
+server/*.spec
 
 .vscode/
 **/__pycache__/

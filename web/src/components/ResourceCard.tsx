@@ -1,5 +1,7 @@
 import { motion, type Variants, type AnimationGeneratorType } from 'framer-motion';
 import React from 'react';
+import { useI18n } from '../contexts/I18nContext';
+import { openExternal } from '../utils/openExternal';
 
 export interface Resource {
   id: number;
@@ -16,6 +18,7 @@ interface ResourceCardProps {
 }
 
 const ResourceCard: React.FC<ResourceCardProps> = ({ resources, className = '' }) => {
+  const { t } = useI18n();
   // 卡片动画变体
   const cardVariants: Variants = {
     initial: { 
@@ -39,9 +42,9 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resources, className = '' }
     return null;
   }
 
-  const handleResourceClick = (url: string, e: React.MouseEvent) => {
+  const handleResourceClick = async (url: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    window.open(url, '_blank', 'noopener,noreferrer');
+    await openExternal(url);
   };
 
   return (
@@ -160,7 +163,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resources, className = '' }
             style={{ color: 'rgba(255, 111, 46, 1)' }}
             whileHover={{ opacity: 1 }}
           >
-            → 点击打开
+            {t('resourceCard.clickToOpen')}
           </motion.div>
         </motion.div>
       ))}

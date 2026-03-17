@@ -1,4 +1,5 @@
 import React from 'react';
+import { useI18n } from '../contexts/I18nContext';
 import type { ToolProgress } from '../hooks/useAgentStream';
 
 interface ToolProgressCardProps {
@@ -7,6 +8,7 @@ interface ToolProgressCardProps {
 }
 
 const ToolProgressCard: React.FC<ToolProgressCardProps> = ({ toolName, progress }) => {
+  const { t } = useI18n();
   const getStepIcon = (step: string) => {
     switch (step) {
       case 'parsing': return '🔍';
@@ -67,7 +69,7 @@ const ToolProgressCard: React.FC<ToolProgressCardProps> = ({ toolName, progress 
       
       {progress.data && progress.step === 'completed' && (
         <div className="mt-3 text-xs bg-white p-2 rounded border border-green-200">
-          <div className="font-medium text-green-800 mb-1">执行结果:</div>
+          <div className="font-medium text-green-800 mb-1">{t('tools.result')}</div>
           <pre className="text-green-700 whitespace-pre-wrap overflow-x-auto">
             {JSON.stringify(progress.data, null, 2)}
           </pre>

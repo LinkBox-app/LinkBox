@@ -5,10 +5,12 @@ import {
   testAISettings,
   updateAISettings,
 } from '../api/methods/settings.methods';
+import { useI18n } from '../contexts/I18nContext';
 import type { AISettings } from '../api/types/settings.types';
 import toast from '../utils/toast';
 
 const Setting: React.FC = () => {
+  const { locale, setLocale, t, formatDateTime } = useI18n();
   const [aiSettings, setAISettings] = useState<AISettings>({
     ai_base_url: '',
     ai_model: '',
@@ -19,16 +21,6 @@ const Setting: React.FC = () => {
   const [isTestingAISettings, setIsTestingAISettings] = useState(false);
   const [showAPIKey, setShowAPIKey] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
 
   useEffect(() => {
     let cancelled = false;
@@ -49,7 +41,7 @@ const Setting: React.FC = () => {
         setLastUpdatedAt(response.updated_at);
       } catch (error: any) {
         if (!cancelled) {
-          toast.error(error.message || '加载 AI 配置失败');
+          toast.error(error.message || t('settings.loadAIError'));
         }
       } finally {
         if (!cancelled) {
@@ -63,7 +55,7 @@ const Setting: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const handleAISettingsChange = (
     field: keyof AISettings,
@@ -85,7 +77,7 @@ const Setting: React.FC = () => {
     const normalizedSettings = normalizeAISettings();
 
     if (!normalizedSettings.ai_base_url || !normalizedSettings.ai_model) {
-      toast.error('请先填写完整的 AI 地址和模型名称');
+      toast.error(t('settings.incompleteAIConfig'));
       return;
     }
 
@@ -98,9 +90,9 @@ const Setting: React.FC = () => {
         ai_api_key: response.ai_api_key,
       });
       setLastUpdatedAt(response.updated_at);
-      toast.success('AI 配置已保存到本地');
+      toast.success(t('settings.saveAISuccess'));
     } catch (error: any) {
-      toast.error(error.message || '保存 AI 配置失败');
+      toast.error(error.message || t('settings.saveAIError'));
     } finally {
       setIsSavingAISettings(false);
     }
@@ -110,12 +102,12 @@ const Setting: React.FC = () => {
     const normalizedSettings = normalizeAISettings();
 
     if (!normalizedSettings.ai_base_url || !normalizedSettings.ai_model) {
-      toast.error('请先填写完整的 AI 地址和模型名称');
+      toast.error(t('settings.incompleteAIConfig'));
       return;
     }
 
     if (!normalizedSettings.ai_api_key) {
-      toast.error('请先填写 AI API Key');
+      toast.error(t('settings.missingApiKey'));
       return;
     }
 
@@ -124,7 +116,7 @@ const Setting: React.FC = () => {
       const response = await testAISettings(normalizedSettings);
       toast.success(response.message, 5000);
     } catch (error: any) {
-      toast.error(error.message || '测试 AI 配置失败', 5000);
+      toast.error(error.message || t('settings.testAIError'), 5000);
     } finally {
       setIsTestingAISettings(false);
     }
@@ -152,7 +144,7 @@ const Setting: React.FC = () => {
               fontFamily: '"Menlo", "Consolas", "Courier New", "Hannotate SC", "DengXian", monospace',
               textShadow: '2px 2px 0 rgba(255, 111, 46, 0.3) sm:3px 3px 0 rgba(255, 111, 46, 0.3)'
             }}>
-          设置
+          {t('settings.title')}
         </h1>
       </motion.div>
 
@@ -253,9 +245,9 @@ const Setting: React.FC = () => {
           }}
           whileHover={{ rotate: -0.2 }}
         >
-          <h3 className="font-bold mb-1 sm:mb-2 text-sm sm:text-base" style={{ color: 'rgba(19, 0, 0, 1)' }}>主题设置</h3>
+          <h3 className="font-bold mb-1 sm:mb-2 text-sm sm:text-base" style={{ color: 'rgba(19, 0, 0, 1)' }}>{t('settings.themeTitle')}</h3>
           <p className="text-xs sm:text-sm opacity-70" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-            当前使用：新拟物风格主题
+            {t('settings.themeDescription')}
           </p>
         </motion.div>
 
@@ -267,10 +259,36 @@ const Setting: React.FC = () => {
           }}
           whileHover={{ rotate: 0.2 }}
         >
-          <h3 className="font-bold mb-1 sm:mb-2 text-sm sm:text-base" style={{ color: 'rgba(19, 0, 0, 1)' }}>语言设置</h3>
+          <h3 className="font-bold mb-1 sm:mb-2 text-sm sm:text-base" style={{ color: 'rgba(19, 0, 0, 1)' }}>{t('settings.languageTitle')}</h3>
           <p className="text-xs sm:text-sm opacity-70" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-            当前使用：简体中文
+            {t('settings.languageDescription')}
           </p>
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setLocale('zh-CN')}
+              className="flex-1 px-3 py-2 border-2 border-solid text-xs sm:text-sm font-bold transition-all"
+              style={{
+                backgroundColor: locale === 'zh-CN' ? 'rgba(255, 111, 46, 1)' : 'rgba(255, 248, 232, 1)',
+                borderColor: 'rgba(19, 0, 0, 1)',
+                color: 'rgba(19, 0, 0, 1)',
+              }}
+            >
+              {t('settings.languageChinese')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setLocale('en-US')}
+              className="flex-1 px-3 py-2 border-2 border-solid text-xs sm:text-sm font-bold transition-all"
+              style={{
+                backgroundColor: locale === 'en-US' ? 'rgba(255, 111, 46, 1)' : 'rgba(255, 248, 232, 1)',
+                borderColor: 'rgba(19, 0, 0, 1)',
+                color: 'rgba(19, 0, 0, 1)',
+              }}
+            >
+              {t('settings.languageEnglish')}
+            </button>
+          </div>
         </motion.div>
 
         {/* <motion.div
@@ -298,22 +316,22 @@ const Setting: React.FC = () => {
           <div className="flex items-start justify-between gap-3 mb-3">
             <div>
               <h3 className="font-bold text-sm sm:text-base" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-                AI 配置
+                {t('settings.aiTitle')}
               </h3>
               <p className="text-xs sm:text-sm opacity-70 mt-1" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-                在这里配置个人使用的 AI 服务，本地保存，保存后立即生效。
+                {t('settings.aiDescription')}
               </p>
             </div>
             {lastUpdatedAt && (
               <span className="text-[11px] sm:text-xs opacity-60 text-right" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-                更新于 {formatDate(lastUpdatedAt)}
+                {t('settings.updatedAt', { date: formatDateTime(lastUpdatedAt) })}
               </span>
             )}
           </div>
 
           {isLoadingAISettings ? (
             <p className="text-xs sm:text-sm opacity-70" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-              正在加载 AI 配置...
+              {t('settings.loadingAI')}
             </p>
           ) : (
             <div className="space-y-3">
@@ -337,7 +355,7 @@ const Setting: React.FC = () => {
 
               <label className="block">
                 <span className="block text-xs sm:text-sm font-bold mb-1" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-                  模型名称
+                  {t('settings.modelName')}
                 </span>
                 <input
                   type="text"
@@ -378,15 +396,15 @@ const Setting: React.FC = () => {
                       backgroundColor: 'rgba(255, 239, 215, 1)',
                       borderColor: 'rgba(19, 0, 0, 1)',
                       color: 'rgba(19, 0, 0, 1)',
-                    }}
-                  >
-                    {showAPIKey ? '隐藏' : '显示'}
+                  }}
+                >
+                    {showAPIKey ? t('settings.hideApiKey') : t('settings.showApiKey')}
                   </button>
                 </div>
               </label>
 
               <p className="text-[11px] sm:text-xs opacity-70" style={{ color: 'rgba(19, 0, 0, 1)' }}>
-                这些配置会保存在本地数据库里，仅当前设备生效。开发环境下如果这里没填，会回退到 `.env` 中的默认值。
+                {t('settings.aiHint')}
               </p>
 
               <div className="flex flex-col sm:flex-row gap-2">
@@ -403,7 +421,7 @@ const Setting: React.FC = () => {
                   whileHover={{ scale: isTestingAISettings || isSavingAISettings ? 1 : 1.02 }}
                   whileTap={{ scale: isTestingAISettings || isSavingAISettings ? 1 : 0.98 }}
                 >
-                  {isTestingAISettings ? '测试中...' : '测试连接'}
+                  {isTestingAISettings ? t('settings.testing') : t('settings.testConnection')}
                 </motion.button>
 
                 <motion.button
@@ -419,7 +437,7 @@ const Setting: React.FC = () => {
                   whileHover={{ scale: isSavingAISettings || isTestingAISettings ? 1 : 1.02 }}
                   whileTap={{ scale: isSavingAISettings || isTestingAISettings ? 1 : 0.98 }}
                 >
-                  {isSavingAISettings ? '保存中...' : '保存配置'}
+                  {isSavingAISettings ? t('settings.saving') : t('settings.saveConfig')}
                 </motion.button>
               </div>
             </div>

@@ -1,9 +1,11 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { useI18n } from "../contexts/I18nContext";
 
 const About = () => {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const { scrollYProgress } = useScroll();
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
@@ -24,6 +26,39 @@ const About = () => {
     localStorage.setItem("app:first_visit", "false");
     navigate("/");
   };
+
+  const features = [
+    {
+      icon: "🤖",
+      title: t("about.featureAiTitle"),
+      description: t("about.featureAiDescription"),
+    },
+    {
+      icon: "🔍",
+      title: t("about.featureSearchTitle"),
+      description: t("about.featureSearchDescription"),
+    },
+    {
+      icon: "💬",
+      title: t("about.featureChatTitle"),
+      description: t("about.featureChatDescription"),
+    },
+  ];
+
+  const steps = [
+    {
+      title: t("about.stepAddTitle"),
+      description: t("about.stepAddDescription"),
+    },
+    {
+      title: t("about.stepOrganizeTitle"),
+      description: t("about.stepOrganizeDescription"),
+    },
+    {
+      title: t("about.stepFindTitle"),
+      description: t("about.stepFindDescription"),
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-[rgba(255,239,215,1)] overflow-x-hidden">
@@ -90,7 +125,7 @@ const About = () => {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5, duration: 0.8 }}
             >
-              智能收藏，AI 赋能的资源管理专家
+              {t("about.heroSubtitle")}
             </motion.p>
 
             {/* 打字机效果的描述 */}
@@ -100,7 +135,7 @@ const About = () => {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.7, duration: 0.8 }}
             >
-              <TypewriterText text="让您的收藏变得井井有条，智能分类，一键搜索" />
+              <TypewriterText text={t("about.heroTypewriter")} />
             </motion.div>
 
             {/* CTA 按钮 */}
@@ -113,7 +148,7 @@ const About = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.9, duration: 0.8 }}
             >
-              开始探索
+              {t("about.startExploring")}
             </motion.button>
           </motion.div>
 
@@ -140,7 +175,7 @@ const About = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
           >
-            核心功能
+            {t("about.coreFeatures")}
           </motion.h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
@@ -161,7 +196,7 @@ const About = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
           >
-            简单三步
+            {t("about.simpleSteps")}
           </motion.h2>
 
           <div className="space-y-8 sm:space-y-10 md:space-y-12">
@@ -182,10 +217,10 @@ const About = () => {
           transition={{ duration: 0.8 }}
         >
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-[rgba(19,0,0,1)] mb-6 sm:mb-8 px-4">
-            准备好管理您的收藏了吗？
+            {t("about.finalTitle")}
           </h2>
           <p className="text-lg sm:text-xl text-[rgba(19,0,0,0.7)] mb-8 sm:mb-10 md:mb-12 px-4">
-            立即开始使用 LinkBox，让 AI 帮您整理数字资源
+            {t("about.finalDescription")}
           </p>
           <motion.button
             onClick={handleStartExploring}
@@ -193,7 +228,7 @@ const About = () => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            立即开始
+            {t("about.finalAction")}
           </motion.button>
         </motion.div>
       </section>
@@ -264,39 +299,5 @@ const StepCard = ({ step, index }: { step: any; index: number }) => {
     </motion.div>
   );
 };
-
-// 数据
-const features = [
-  {
-    icon: "🤖",
-    title: "AI 智能分类",
-    description: "自动为您的收藏生成标签和摘要，让资源管理更高效"
-  },
-  {
-    icon: "🔍",
-    title: "强大搜索",
-    description: "通过标签、关键词快速找到您需要的资源"
-  },
-  {
-    icon: "💬",
-    title: "AI 对话助手",
-    description: "与 AI 对话，获取个性化的资源推荐和整理建议"
-  }
-];
-
-const steps = [
-  {
-    title: "添加收藏",
-    description: "粘贴链接或输入资源信息，AI 会自动识别并生成标签"
-  },
-  {
-    title: "智能整理",
-    description: "AI 自动分类，为每个资源生成摘要和标签"
-  },
-  {
-    title: "快速查找",
-    description: "通过标签筛选或关键词搜索，秒速定位您的收藏"
-  }
-];
 
 export default About;
