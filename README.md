@@ -1,10 +1,7 @@
-<h1 style="text-align: center;"> LinkBox </h1>
-<div style="text-align: center;">
-  <img src=./misc/img/icon.png width="50%" />
-</div>
-
-<div style="text-align: center;">
-English | <a href="./README_CN.md">中文</a>
+<div align="center">
+  <img src="./misc/img/icon.png" alt="LinkBox icon" width="160" />
+  <h1>LinkBox</h1>
+  <p>English | <a href="./README_CN.md">中文</a></p>
 </div>
 
 LinkBox is an AI-assisted bookmark manager packaged as a cross-platform desktop app with Tauri. It combines a React frontend, a FastAPI backend, and a bundled Python sidecar so the app can be distributed on macOS, Windows, and Linux.
