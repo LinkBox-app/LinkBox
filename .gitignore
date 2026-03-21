@@ -26,3 +26,6 @@ server/*.spec
 **/build/
 
 pnpm-lock.yaml
+
+misc/IconKitchen-Output/
+bug.md
