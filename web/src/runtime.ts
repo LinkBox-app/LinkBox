@@ -2,6 +2,9 @@ import { LOCALE_KEY } from './storage-key.constant';
 
 const DEFAULT_API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:7032';
+const BACKEND_STARTUP_TIMEOUT_MS = 30_000;
+const BACKEND_HEALTHCHECK_INTERVAL_MS = 300;
+const BACKEND_HEALTHCHECK_REQUEST_TIMEOUT_MS = 1_500;
 
 interface RuntimeConfig {
   apiBaseUrl: string;
@@ -31,26 +34,51 @@ const detectLocale = () => {
 const isDesktopRuntime = () =>
   typeof window !== 'undefined' && typeof window.__TAURI_INTERNALS__ !== 'undefined';
 
-const waitForBackend = async (apiBaseUrl: string) => {
-  const maxAttempts = 40;
+const delay = (ms: number) =>
+  new Promise((resolve) => window.setTimeout(resolve, ms));
 
-  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+const waitForBackend = async (apiBaseUrl: string) => {
+  const deadline = Date.now() + BACKEND_STARTUP_TIMEOUT_MS;
+  let lastError: unknown = null;
+
+  while (Date.now() < deadline) {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(
+      () => controller.abort(),
+      BACKEND_HEALTHCHECK_REQUEST_TIMEOUT_MS
+    );
+
     try {
-      const response = await fetch(`${apiBaseUrl}/health`);
+      const response = await fetch(`${apiBaseUrl}/health`, {
+        cache: 'no-store',
+        signal: controller.signal,
+      });
+
       if (response.ok) {
+        window.clearTimeout(timeoutId);
         return;
       }
-    } catch {
-      // sidecar is still booting
+
+      lastError = new Error(`Health check returned ${response.status}`);
+    } catch (error) {
+      lastError =
+        error instanceof Error
+          ? error
+          : new Error('Health check request failed');
+    } finally {
+      window.clearTimeout(timeoutId);
     }
 
-    await new Promise((resolve) => window.setTimeout(resolve, 250));
+    await delay(BACKEND_HEALTHCHECK_INTERVAL_MS);
   }
+
+  const seconds = Math.round(BACKEND_STARTUP_TIMEOUT_MS / 1000);
+  const detail = lastError instanceof Error ? ` (${lastError.message})` : '';
 
   throw new Error(
     detectLocale() === 'en-US'
-      ? 'Timed out while waiting for the desktop backend to start'
-      : '桌面端后端服务启动超时'
+      ? `Timed out after ${seconds}s while waiting for the desktop backend to start${detail}`
+      : `等待桌面端后端服务启动超时（${seconds} 秒）${detail}`
   );
 };
 

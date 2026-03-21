@@ -1,9 +1,20 @@
-# LinkBox
-<img src=./misc/img/icon.png >
+<h1 style="text-align: center;"> LinkBox </h1>
+<div style="text-align: center;">
+  <img src=./misc/img/icon.png width="50%" />
+</div>
 
-English | [中文说明](./README_CN.md)
+<div style="text-align: center;">
+English | <a href="./README_CN.md">中文</a>
+</div>
 
 LinkBox is an AI-assisted bookmark manager packaged as a cross-platform desktop app with Tauri. It combines a React frontend, a FastAPI backend, and a bundled Python sidecar so the app can be distributed on macOS, Windows, and Linux.
+
+## Install 
+
+🍎MacOS:
+```
+sudo xattr -cr /Applications/LinkBox.app/
+```
 
 ## Highlights
 

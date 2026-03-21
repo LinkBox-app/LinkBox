@@ -1966,6 +1966,7 @@ dependencies = [
 name = "linkbox-desktop"
 version = "0.1.0"
 dependencies = [
+ "libc",
  "serde",
  "tauri",
  "tauri-build",

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
+import type { TagResponse } from '../api/methods/tag.methods';
 import type { ResourceResponse } from '../api/types/resource.types';
 import BookmarkModal from '../components/BookmarkModal';
 import CreateTagModal from '../components/CreateTagModal';
@@ -12,6 +13,89 @@ import { useAuth } from '../hooks/useAuth';
 import { useResources } from '../contexts/ResourceContext';
 import { openExternal } from '../utils/openExternal';
 import toast from '../utils/toast';
+
+type TagChipProps = {
+  layoutId: string;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  showDelete?: boolean;
+  onDelete?: () => void;
+  deleteTitle?: string;
+};
+
+const TAG_CHIP_LAYOUT_TRANSITION = {
+  duration: 0.24,
+  ease: [0.22, 1, 0.36, 1] as const,
+};
+
+const TagChip: React.FC<TagChipProps> = ({
+  layoutId,
+  label,
+  active,
+  onClick,
+  showDelete = false,
+  onDelete,
+  deleteTitle,
+}) => (
+  <motion.div
+    layout="position"
+    layoutId={layoutId}
+    initial={{ opacity: 0, y: 8 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -6 }}
+    transition={{
+      layout: TAG_CHIP_LAYOUT_TRANSITION,
+      opacity: { duration: 0.16 },
+      y: TAG_CHIP_LAYOUT_TRANSITION,
+    }}
+    whileHover={{ y: -1 }}
+    whileTap={{ scale: 0.98 }}
+    className={`relative flex items-center gap-2 border-2 border-solid font-bold transition-[background-color,color,box-shadow] duration-200 ${
+      active
+        ? 'shadow-[3px_3px_0_rgba(19,0,0,1)] sm:shadow-[4px_4px_0_rgba(19,0,0,1)]'
+        : 'shadow-[2px_2px_0_rgba(19,0,0,1)] hover:shadow-[3px_3px_0_rgba(19,0,0,1)] sm:hover:shadow-[4px_4px_0_rgba(19,0,0,1)]'
+    }`}
+    style={{
+      backgroundColor: active ? 'rgba(255, 111, 46, 1)' : 'rgba(255, 248, 232, 1)',
+      borderColor: 'rgba(19, 0, 0, 1)',
+      color: 'rgba(19, 0, 0, 1)',
+    }}
+  >
+    <button
+      type="button"
+      onClick={onClick}
+      className="max-w-[10rem] sm:max-w-[14rem] truncate px-3 py-1.5 sm:px-4 sm:py-2 text-left text-sm sm:text-base"
+      title={label}
+    >
+      {label}
+    </button>
+
+    {showDelete && onDelete && (
+      <motion.button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+        initial={{ opacity: 0, scale: 0.85 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.85 }}
+        transition={{ duration: 0.16, ease: 'easeOut' }}
+        className="mr-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-solid text-xs font-bold transition-all hover:scale-105"
+        style={{
+          backgroundColor: 'rgba(239, 68, 68, 1)',
+          borderColor: 'rgba(19, 0, 0, 1)',
+          color: 'rgba(255, 255, 255, 1)',
+        }}
+        title={deleteTitle}
+        aria-label={deleteTitle}
+      >
+        ×
+      </motion.button>
+    )}
+  </motion.div>
+);
 
 const Home: React.FC = () => {
   const { t, formatDate } = useI18n();
@@ -33,6 +117,8 @@ const Home: React.FC = () => {
   const [showDeleteTagModal, setShowDeleteTagModal] = useState(false);
   const [showEditResourceModal, setShowEditResourceModal] = useState(false);
   const [showDeleteResourceModal, setShowDeleteResourceModal] = useState(false);
+  const [showAllTags, setShowAllTags] = useState(false);
+  const [isManagingTags, setIsManagingTags] = useState(false);
   const [tagToDelete, setTagToDelete] = useState<{ id: number; name: string } | null>(null);
   const [resourceToEdit, setResourceToEdit] = useState<ResourceResponse | null>(null);
   const [resourceToDelete, setResourceToDelete] = useState<ResourceResponse | null>(null);
@@ -88,6 +174,7 @@ const Home: React.FC = () => {
   const handleDeleteTagSuccess = () => {
     setShowDeleteTagModal(false);
     setTagToDelete(null);
+    setIsManagingTags(false);
     void fetchList(selectedTag, currentPage);
   };
 
@@ -116,6 +203,44 @@ const Home: React.FC = () => {
     setResourceToDelete(null);
     void fetchList(selectedTag, currentPage);
   };
+
+  const primaryTagLimit = isMobile ? 5 : 8;
+  const visibleTagIds = new Set<number>();
+  const selectedTagItem = selectedTag
+    ? tags.find((tag) => tag.name === selectedTag) ?? null
+    : null;
+
+  if (selectedTagItem) {
+    visibleTagIds.add(selectedTagItem.id);
+  }
+
+  tags.forEach((tag) => {
+    if (visibleTagIds.size < primaryTagLimit) {
+      visibleTagIds.add(tag.id);
+    }
+  });
+
+  const primaryTags = tags.filter((tag) => visibleTagIds.has(tag.id));
+  const overflowTags = tags.filter((tag) => !visibleTagIds.has(tag.id));
+
+  useEffect(() => {
+    if (overflowTags.length === 0 && showAllTags) {
+      setShowAllTags(false);
+    }
+  }, [overflowTags.length, showAllTags]);
+
+  const renderTagChip = (tag: TagResponse) => (
+    <TagChip
+      key={tag.id}
+      layoutId={`tag-chip-${tag.id}`}
+      label={`#${tag.name}`}
+      active={selectedTag === tag.name}
+      onClick={() => selectTag(tag.name)}
+      showDelete={isManagingTags}
+      onDelete={() => handleDeleteTag(tag.id, tag.name)}
+      deleteTitle={t('home.deleteTagTitle', { name: tag.name })}
+    />
+  );
 
   if (authLoading) {
     return (
@@ -190,23 +315,40 @@ const Home: React.FC = () => {
       <div className="max-w-4xl mx-auto p-4 sm:p-6">
         {/* 标签栏 */}
         <div className="mb-4 sm:mb-6">
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 sm:mb-4">
             <h2 className="text-base sm:text-lg font-bold" style={{ color: 'rgba(19, 0, 0, 1)' }}>
               {t('home.tagSectionTitle')}
             </h2>
-            <motion.button
-              onClick={() => setShowCreateTagModal(true)}
-              className="px-2 py-1 sm:px-3 sm:py-1 border-2 border-solid font-bold text-xs sm:text-sm shadow-[2px_2px_0_rgba(19,0,0,1)] hover:shadow-[3px_3px_0_rgba(19,0,0,1)] hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all"
-              style={{
-                backgroundColor: 'rgba(255, 111, 46, 1)',
-                borderColor: 'rgba(19, 0, 0, 1)',
-                color: 'rgba(19, 0, 0, 1)',
-              }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              {t('home.createTag')}
-            </motion.button>
+            <div className="flex flex-wrap items-center gap-2">
+              {tags.length > 0 && (
+                <motion.button
+                  onClick={() => setIsManagingTags((prev) => !prev)}
+                  className="px-2 py-1 sm:px-3 sm:py-1 border-2 border-solid font-bold text-xs sm:text-sm shadow-[2px_2px_0_rgba(19,0,0,1)] hover:shadow-[3px_3px_0_rgba(19,0,0,1)] hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all"
+                  style={{
+                    backgroundColor: isManagingTags ? 'rgba(19, 0, 0, 1)' : 'rgba(255, 248, 232, 1)',
+                    borderColor: 'rgba(19, 0, 0, 1)',
+                    color: isManagingTags ? 'rgba(255, 248, 232, 1)' : 'rgba(19, 0, 0, 1)',
+                  }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  {isManagingTags ? t('home.doneManagingTags') : t('home.manageTags')}
+                </motion.button>
+              )}
+              <motion.button
+                onClick={() => setShowCreateTagModal(true)}
+                className="px-2 py-1 sm:px-3 sm:py-1 border-2 border-solid font-bold text-xs sm:text-sm shadow-[2px_2px_0_rgba(19,0,0,1)] hover:shadow-[3px_3px_0_rgba(19,0,0,1)] hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all"
+                style={{
+                  backgroundColor: 'rgba(255, 111, 46, 1)',
+                  borderColor: 'rgba(19, 0, 0, 1)',
+                  color: 'rgba(19, 0, 0, 1)',
+                }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {t('home.createTag')}
+              </motion.button>
+            </div>
           </div>
           
           {isLoadingTags ? (
@@ -225,106 +367,81 @@ const Home: React.FC = () => {
               <p className="text-center">{t('home.emptyTags')}</p>
             </div>
           ) : (
-            <div className="flex flex-col gap-2 sm:gap-3">
-              <div className="flex flex-wrap gap-2 sm:gap-3">
-                <AnimatePresence>
-                  <motion.div
-                    key="all"
-                    layout
-                    initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
-                    animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                    exit={{ opacity: 0, scale: 0.8, rotate: 5 }}
-                    whileHover={{ rotate: -2, scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className={`px-3 py-1.5 sm:px-4 sm:py-2 border-2 border-solid font-bold cursor-pointer text-sm sm:text-base ${
-                      selectedTag === null
-                        ? 'shadow-[3px_3px_0_rgba(19,0,0,1)] sm:shadow-[4px_4px_0_rgba(19,0,0,1)]'
-                        : 'shadow-[2px_2px_0_rgba(19,0,0,1)] hover:shadow-[3px_3px_0_rgba(19,0,0,1)] sm:hover:shadow-[4px_4px_0_rgba(19,0,0,1)] hover:translate-x-[-1px] hover:translate-y-[-1px] sm:hover:translate-x-[-2px] sm:hover:translate-y-[-2px]'
-                    } transition-all`}
-                    style={{
-                      backgroundColor: selectedTag === null ? 'rgba(255, 111, 46, 1)' : 'rgba(255, 248, 232, 1)',
-                      borderColor: 'rgba(19, 0, 0, 1)',
-                      color: 'rgba(19, 0, 0, 1)',
-                    }}
-                    onClick={() => selectTag(null)}
-                  >
-                    {t('home.allResources')}
-                  </motion.div>
+            <div
+              className="flex flex-col gap-3 border-2 border-solid p-3 sm:gap-4 sm:p-4"
+              style={{
+                backgroundColor: 'rgba(255, 248, 232, 0.72)',
+                borderColor: 'rgba(19, 0, 0, 1)',
+              }}
+            >
+              <LayoutGroup id="home-tag-layout">
+                <div className="flex flex-wrap gap-2 sm:gap-3">
+                  <AnimatePresence initial={false} mode="popLayout">
+                    <TagChip
+                      key="all"
+                      layoutId="tag-chip-all"
+                      label={t('home.allResources')}
+                      active={selectedTag === null}
+                      onClick={() => selectTag(null)}
+                    />
 
-                  {tags.map((tag) => (
-                    <motion.div
-                      key={tag.id}
-                      layout
-                      initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
-                      animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                      exit={{ opacity: 0, scale: 0.8, rotate: 5 }}
-                      whileHover={{ rotate: -2, scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className={`relative group px-3 py-1.5 sm:px-4 sm:py-2 border-2 border-solid font-bold cursor-pointer text-sm sm:text-base ${
-                        selectedTag === tag.name
-                          ? 'shadow-[3px_3px_0_rgba(19,0,0,1)] sm:shadow-[4px_4px_0_rgba(19,0,0,1)]'
-                          : 'shadow-[2px_2px_0_rgba(19,0,0,1)] hover:shadow-[3px_3px_0_rgba(19,0,0,1)] sm:hover:shadow-[4px_4px_0_rgba(19,0,0,1)] hover:translate-x-[-1px] hover:translate-y-[-1px] sm:hover:translate-x-[-2px] sm:hover:translate-y-[-2px]'
-                      } transition-all`}
+                    {primaryTags.map(renderTagChip)}
+                  </AnimatePresence>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm">
+                  <span className="opacity-70" style={{ color: 'rgba(19, 0, 0, 1)' }}>
+                    {t('home.showingTags', {
+                      visible: primaryTags.length,
+                      total: tags.length,
+                    })}
+                  </span>
+
+                  {overflowTags.length > 0 && (
+                    <motion.button
+                      onClick={() => setShowAllTags((prev) => !prev)}
+                      className="border-2 border-dashed px-2 py-1 font-bold shadow-[2px_2px_0_rgba(19,0,0,0.25)] transition-all hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[3px_3px_0_rgba(19,0,0,0.4)]"
                       style={{
-                        backgroundColor: selectedTag === tag.name ? 'rgba(255, 111, 46, 1)' : 'rgba(255, 248, 232, 1)',
-                        borderColor: 'rgba(19, 0, 0, 1)',
+                        backgroundColor: showAllTags ? 'rgba(255, 111, 46, 0.18)' : 'rgba(255, 248, 232, 0.8)',
+                        borderColor: 'rgba(19, 0, 0, 0.55)',
                         color: 'rgba(19, 0, 0, 1)',
                       }}
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
                     >
-                      <button
-                        onClick={() => selectTag(tag.name)}
-                        className="flex-1 text-left"
-                      >
-                        #{tag.name}
-                      </button>
-
-                      {/* 删除按钮 */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteTag(tag.id, tag.name);
-                        }}
-                        className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 flex items-center justify-center"
-                        style={{
-                          backgroundColor: 'rgba(239, 68, 68, 1)',
-                          color: 'rgba(255, 255, 255, 1)',
-                        }}
-                        title={t('home.deleteTagTitle', { name: tag.name })}
-                      >
-                        ×
-                      </button>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-
-                {/* 创建标签按钮 */}
-                <motion.button
-                  onClick={() => setShowCreateTagModal(true)}
-                  className="px-3 py-1.5 sm:px-4 sm:py-2 border-2 border-dashed font-bold hover:border-solid shadow-[2px_2px_0_rgba(19,0,0,0.3)] hover:shadow-[3px_3px_0_rgba(19,0,0,0.5)] hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all text-sm sm:text-base"
-                  style={{
-                    backgroundColor: 'rgba(255, 248, 232, 0.5)',
-                    borderColor: 'rgba(19, 0, 0, 0.5)',
-                    color: 'rgba(19, 0, 0, 0.7)',
-                  }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  {t('home.createShort')}
-                </motion.button>
-              </div>
-
-              {tags.length === 0 && (
-                <div 
-                  className="p-4 border-2 border-solid transform rotate-[-0.3deg]"
-                  style={{
-                    backgroundColor: 'rgba(255, 248, 232, 1)',
-                    borderColor: 'rgba(19, 0, 0, 1)',
-                    color: 'rgba(19, 0, 0, 1)',
-                  }}
-                >
-                  <p className="text-center">{t('home.emptyTags')}</p>
+                      {showAllTags
+                        ? t('home.collapseTags')
+                        : t('home.moreTags', { count: overflowTags.length })}
+                    </motion.button>
+                  )}
                 </div>
-              )}
+
+                <AnimatePresence initial={false}>
+                  {showAllTags && overflowTags.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0, y: -8 }}
+                      animate={{ opacity: 1, height: 'auto', y: 0 }}
+                      exit={{ opacity: 0, height: 0, y: -8 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <div
+                        className="max-h-48 overflow-y-auto border-2 border-dashed p-3 sm:max-h-56"
+                        style={{
+                          backgroundColor: 'rgba(255, 248, 232, 0.85)',
+                          borderColor: 'rgba(19, 0, 0, 0.45)',
+                        }}
+                      >
+                        <div className="flex flex-wrap gap-2 sm:gap-3">
+                          <AnimatePresence initial={false} mode="popLayout">
+                            {overflowTags.map(renderTagChip)}
+                          </AnimatePresence>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </LayoutGroup>
             </div>
           )}
         </div>

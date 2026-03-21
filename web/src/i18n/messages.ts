@@ -29,6 +29,11 @@ type Messages = {
     loadingTags: string;
     emptyTags: string;
     allResources: string;
+    manageTags: string;
+    doneManagingTags: string;
+    moreTags: string;
+    collapseTags: string;
+    showingTags: string;
     deleteTagTitle: string;
     resourceSectionTitle: string;
     totalResources: string;
@@ -275,6 +280,11 @@ export const messages: Record<Locale, Messages> = {
       loadingTags: "加载标签中",
       emptyTags: "暂无标签，收藏您的第一个链接吧！",
       allResources: "全部资源",
+      manageTags: "管理",
+      doneManagingTags: "完成",
+      moreTags: "还有 {count} 个标签",
+      collapseTags: "收起标签",
+      showingTags: "当前显示 {visible} / {total} 个标签",
       deleteTagTitle: "删除标签 {name}",
       resourceSectionTitle: "#{tag} 资源",
       totalResources: "共 {count} 个资源",
@@ -519,6 +529,11 @@ export const messages: Record<Locale, Messages> = {
       loadingTags: "Loading tags",
       emptyTags: "No tags yet. Save your first link to get started.",
       allResources: "All Resources",
+      manageTags: "Manage",
+      doneManagingTags: "Done",
+      moreTags: "{count} more tags",
+      collapseTags: "Show less",
+      showingTags: "Showing {visible} of {total} tags",
       deleteTagTitle: "Delete tag {name}",
       resourceSectionTitle: "#{tag} resources",
       totalResources: "{count} resources",

@@ -1,7 +1,7 @@
 {
   "name": "linkbox-desktop",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "scripts": {
     "dev:web": "npm --prefix web run dev -- --host 127.0.0.1 --port 1420",
     "build:web": "npm --prefix web run build",

@@ -3,13 +3,19 @@ use std::fs::create_dir_all;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
+use std::thread::sleep;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_shell::process::CommandChild;
 use tauri_plugin_shell::ShellExt;
 
+#[cfg(unix)]
+use std::os::unix::process::CommandExt;
+
 const API_HOST: &str = "127.0.0.1";
 const API_PORT: u16 = 7032;
 const SIDECAR_NAME: &str = "linkbox-server";
+const BACKEND_SHUTDOWN_GRACE_PERIOD: Duration = Duration::from_secs(2);
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -73,31 +79,105 @@ fn bundled_sidecar_path() -> Option<PathBuf> {
     candidate.exists().then_some(candidate)
 }
 
+fn configure_backend_command(command: &mut Command) {
+    command
+        .stdin(Stdio::null())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit());
+
+    #[cfg(unix)]
+    command.process_group(0);
+}
+
+#[cfg(unix)]
+fn signal_backend_process_tree(pid: u32, signal: libc::c_int) {
+    let pid = pid as libc::pid_t;
+
+    unsafe {
+        if libc::killpg(pid, signal) != 0 {
+            let _ = libc::kill(pid, signal);
+        }
+    }
+}
+
+#[cfg(windows)]
+fn force_stop_backend_process_tree(pid: u32) {
+    let _ = Command::new("taskkill")
+        .args(["/PID", &pid.to_string(), "/T", "/F"])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+}
+
+fn stop_dev_backend(process: &mut Child) {
+    let pid = process.id();
+
+    #[cfg(unix)]
+    signal_backend_process_tree(pid, libc::SIGTERM);
+
+    #[cfg(windows)]
+    force_stop_backend_process_tree(pid);
+
+    let deadline = Instant::now() + BACKEND_SHUTDOWN_GRACE_PERIOD;
+    loop {
+        match process.try_wait() {
+            Ok(Some(_)) => break,
+            Ok(None) if Instant::now() < deadline => sleep(Duration::from_millis(100)),
+            Ok(None) => {
+                #[cfg(unix)]
+                signal_backend_process_tree(pid, libc::SIGKILL);
+
+                let _ = process.kill();
+                let _ = process.wait();
+                break;
+            }
+            Err(_) => {
+                let _ = process.kill();
+                break;
+            }
+        }
+    }
+}
+
+fn stop_sidecar_backend(process: CommandChild) {
+    let pid = process.pid();
+
+    #[cfg(unix)]
+    {
+        signal_backend_process_tree(pid, libc::SIGTERM);
+        sleep(BACKEND_SHUTDOWN_GRACE_PERIOD);
+        signal_backend_process_tree(pid, libc::SIGKILL);
+    }
+
+    #[cfg(windows)]
+    force_stop_backend_process_tree(pid);
+
+    let _ = process.kill();
+}
+
 fn start_backend(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let data_dir = app_data_dir(app)?;
     let args = sidecar_args(&data_dir);
 
     let backend_child = if let Some(sidecar_path) = bundled_sidecar_path() {
-        let child = Command::new(sidecar_path)
-            .args(&args)
-            .stdin(Stdio::null())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .spawn()?;
+        let mut command = Command::new(sidecar_path);
+        command.args(&args);
+        configure_backend_command(&mut command);
+        let child = command.spawn()?;
 
         BackendChild::Dev(child)
     } else if cfg!(debug_assertions) {
         let project_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
         let server_entry = project_root.join("server").join("main.py");
 
-        let child = Command::new("python3")
+        let mut command = Command::new("python3");
+        command
             .arg(server_entry)
             .args(&args)
-            .current_dir(project_root)
-            .stdin(Stdio::null())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .spawn()?;
+            .current_dir(project_root);
+        configure_backend_command(&mut command);
+        let child = command.spawn()?;
 
         BackendChild::Dev(child)
     } else {
@@ -129,13 +209,8 @@ fn stop_backend(app: &AppHandle) {
     };
 
     match child {
-        BackendChild::Dev(mut process) => {
-            let _ = process.kill();
-            let _ = process.wait();
-        }
-        BackendChild::Sidecar(process) => {
-            let _ = process.kill();
-        }
+        BackendChild::Dev(mut process) => stop_dev_backend(&mut process),
+        BackendChild::Sidecar(process) => stop_sidecar_backend(process),
     }
 }
 
@@ -156,7 +231,10 @@ pub fn run() {
         .build(context)
         .expect("error while building tauri application")
         .run(|app, event| {
-            if matches!(event, tauri::RunEvent::Exit | tauri::RunEvent::ExitRequested { .. }) {
+            if matches!(
+                event,
+                tauri::RunEvent::Exit | tauri::RunEvent::ExitRequested { .. }
+            ) {
                 stop_backend(app);
             }
         });
