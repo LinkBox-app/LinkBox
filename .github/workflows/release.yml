@@ -97,8 +97,8 @@ jobs:
           python -m pip install pyinstaller -r server/requirements.txt
 
       - name: Build Python sidecar
-        run: python scripts/build_sidecar.py --mode onedir
-
+        run: python scripts/build_sidecar.py 
+        
       - name: Build and publish desktop bundles
         uses: tauri-apps/tauri-action@v0
         env:
