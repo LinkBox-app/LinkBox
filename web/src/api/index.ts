@@ -1,16 +1,17 @@
 import { createAlova } from "alova";
 import adapterFetch from "alova/fetch";
 import ReactHook from "alova/react";
-import { getRuntimeConfig } from "../runtime";
+import { ensureRuntimeReady, getRuntimeConfig } from "../runtime";
 
-export const BASE_URL = getRuntimeConfig().apiBaseUrl;
+export const getBaseUrl = () => getRuntimeConfig().apiBaseUrl;
 
 const alova = createAlova({
   requestAdapter: adapterFetch(),
-  baseURL: BASE_URL,
+  baseURL: getBaseUrl(),
   statesHook: ReactHook,
   // 请求拦截器
-  beforeRequest(method) {
+  async beforeRequest(method) {
+    await ensureRuntimeReady();
     method.config.headers ??= {};
 
     if (!method.meta?.isFile) {

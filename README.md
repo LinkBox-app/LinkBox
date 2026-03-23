@@ -81,6 +81,9 @@ Build the Python sidecar first:
 npm run build:sidecar
 ```
 
+`build:sidecar` now produces the directory-based sidecar that Tauri bundles as resources.
+It refreshes the resource-backed sidecar under `src-tauri/resources/sidecar/`.
+
 Then build desktop bundles:
 
 ```bash

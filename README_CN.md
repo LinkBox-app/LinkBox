@@ -74,6 +74,9 @@ npm run tauri:dev
 npm run build:sidecar
 ```
 
+`build:sidecar` 现在会生成供 Tauri 作为资源打包的 `onedir` sidecar。
+它会刷新 `src-tauri/resources/sidecar/` 下的资源 sidecar。
+
 再构建桌面包：
 
 ```bash

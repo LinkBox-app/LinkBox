@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
-import { BASE_URL } from "../api";
+import { getBaseUrl } from "../api";
+import { ensureRuntimeReady } from "../runtime";
 
 // 事件类型
 export type StreamEventType =
@@ -186,7 +187,9 @@ export const useAgentStream = (): UseAgentStreamReturn => {
       setAbortController(controller);
 
       try {
-        const response = await fetch(`${BASE_URL}/ai/chat/agent`, {
+        await ensureRuntimeReady();
+
+        const response = await fetch(`${getBaseUrl()}/ai/chat/agent`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

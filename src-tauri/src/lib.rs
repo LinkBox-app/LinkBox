@@ -66,16 +66,17 @@ fn sidecar_args(data_dir: &PathBuf) -> Vec<String> {
     ]
 }
 
-fn bundled_sidecar_path() -> Option<PathBuf> {
-    let executable = std::env::current_exe().ok()?;
-    let executable_dir = executable.parent()?;
-    let sidecar_name = if cfg!(target_os = "windows") {
+fn executable_sidecar_name() -> String {
+    if cfg!(target_os = "windows") {
         format!("{SIDECAR_NAME}.exe")
     } else {
         SIDECAR_NAME.to_string()
-    };
-    let candidate = executable_dir.join(sidecar_name);
+    }
+}
 
+fn resource_sidecar_path(app: &AppHandle) -> Option<PathBuf> {
+    let resource_dir = app.path().resource_dir().ok()?;
+    let candidate = resource_dir.join("sidecar").join(executable_sidecar_name());
     candidate.exists().then_some(candidate)
 }
 
@@ -160,22 +161,31 @@ fn start_backend(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let data_dir = app_data_dir(app)?;
     let args = sidecar_args(&data_dir);
 
-    let backend_child = if let Some(sidecar_path) = bundled_sidecar_path() {
+    let backend_child = if cfg!(debug_assertions) {
+        if let Some(sidecar_path) = resource_sidecar_path(app) {
+            let mut command = Command::new(sidecar_path);
+            command.args(&args);
+            configure_backend_command(&mut command);
+            let child = command.spawn()?;
+
+            BackendChild::Dev(child)
+        } else {
+            let project_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+            let server_entry = project_root.join("server").join("main.py");
+
+            let mut command = Command::new("python3");
+            command
+                .arg(server_entry)
+                .args(&args)
+                .current_dir(project_root);
+            configure_backend_command(&mut command);
+            let child = command.spawn()?;
+
+            BackendChild::Dev(child)
+        }
+    } else if let Some(sidecar_path) = resource_sidecar_path(app) {
         let mut command = Command::new(sidecar_path);
         command.args(&args);
-        configure_backend_command(&mut command);
-        let child = command.spawn()?;
-
-        BackendChild::Dev(child)
-    } else if cfg!(debug_assertions) {
-        let project_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
-        let server_entry = project_root.join("server").join("main.py");
-
-        let mut command = Command::new("python3");
-        command
-            .arg(server_entry)
-            .args(&args)
-            .current_dir(project_root);
         configure_backend_command(&mut command);
         let child = command.spawn()?;
 

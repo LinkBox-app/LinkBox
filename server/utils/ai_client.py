@@ -1,7 +1,4 @@
-from typing import Optional
-
-from langchain_core.messages import HumanMessage
-from langchain_openai import ChatOpenAI
+from typing import Any, Optional
 from sqlalchemy.orm import Session
 
 from config import settings
@@ -40,7 +37,7 @@ def build_chat_model(
     config: AISettingsUpdate,
     *,
     streaming: bool,
-) -> ChatOpenAI:
+) -> Any:
     """根据给定配置创建 ChatOpenAI 客户端。"""
     if not config.ai_base_url:
         raise BusinessError("请先在设置页填写 AI 接口地址")
@@ -50,6 +47,8 @@ def build_chat_model(
 
     if not config.ai_api_key:
         raise BusinessError("请先在设置页填写 AI API Key")
+
+    from langchain_openai import ChatOpenAI
 
     return ChatOpenAI(
         base_url=config.ai_base_url,
@@ -64,7 +63,7 @@ def create_chat_model(
     user_id: int,
     *,
     streaming: bool,
-) -> ChatOpenAI:
+) -> Any:
     """根据用户当前生效的 AI 配置创建客户端。"""
     return build_chat_model(
         get_effective_ai_settings(db, user_id),
@@ -74,6 +73,8 @@ def create_chat_model(
 
 async def test_chat_model(config: AISettingsUpdate) -> str:
     """测试给定 AI 配置是否可用。"""
+    from langchain_core.messages import HumanMessage
+
     llm = build_chat_model(config, streaming=False)
     response = await llm.ainvoke([HumanMessage(content="请只回复 OK")])
     content = getattr(response, "content", "")

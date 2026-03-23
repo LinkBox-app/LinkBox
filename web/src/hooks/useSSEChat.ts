@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { BASE_URL } from '../api';
+import { getBaseUrl } from '../api';
+import { ensureRuntimeReady } from '../runtime';
 
 // 工具调用类型
 export interface ToolCall {
@@ -72,15 +73,19 @@ export const useSSEChat = (): UseSSEChatReturn => {
       const requestData = { messages };
 
       // 发送SSE请求
-      fetch(`${BASE_URL}/ai/chat/stream`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData),
-        signal: controller.signal,
-      })
-        .then(response => {
+      void (async () => {
+        try {
+          await ensureRuntimeReady();
+
+          const response = await fetch(`${getBaseUrl()}/ai/chat/stream`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData),
+            signal: controller.signal,
+          });
+
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
@@ -177,8 +182,7 @@ export const useSSEChat = (): UseSSEChatReturn => {
           };
 
           readStream();
-        })
-        .catch(fetchError => {
+        } catch (fetchError) {
           if (controller.signal.aborted) {
             setIsLoading(false);
             setAbortController(null);
@@ -189,7 +193,8 @@ export const useSSEChat = (): UseSSEChatReturn => {
             setError('网络请求失败');
             reject(fetchError);
           }
-        });
+        }
+      })();
     });
   }, []);
 

@@ -4,9 +4,6 @@ from typing import AsyncGenerator, Dict, Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from langchain.agents import create_tool_calling_agent, AgentExecutor
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from typing_extensions import Annotated, TypedDict
@@ -16,7 +13,6 @@ from models import User
 from schemas.ai_schemas import ChatRequest
 from utils.ai_client import create_chat_model, get_effective_ai_settings
 from utils.auth import get_current_user
-from utils.langchain_tools import get_tools
 
 # 初始化路由器
 router = APIRouter(prefix="/ai", tags=["AI对话"])
@@ -66,6 +62,7 @@ async def ai_chat_stream(
     """
     try:
         llm = create_chat_model(db, current_user.id, streaming=True)
+        from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
         # 检查是否有消息
         if not request.messages:
@@ -199,6 +196,11 @@ async def ai_chat_agent(
     
     async def generate_response() -> AsyncGenerator[str, None]:
         try:
+            from langchain.agents import AgentExecutor, create_tool_calling_agent
+            from langchain_core.messages import AIMessage, HumanMessage
+            from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+            from utils.langchain_tools import get_tools
+
             # 创建进度回调函数（直接将进度数据放入队列）
             async def progress_callback(progress_data: Dict[str, Any]):
                 print(f"[Progress Callback] Received: {progress_data.get('type', 'unknown')}")
@@ -278,7 +280,7 @@ async def ai_chat_agent(
 
 
 async def process_agent_stream(
-    agent_executor: AgentExecutor, inputs: Dict[str, Any], model_name: str
+    agent_executor: Any, inputs: Dict[str, Any], model_name: str
 ):
     """处理 Agent 事件流"""
     async for event in agent_executor.astream_events(inputs, version="v2"):

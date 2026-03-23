@@ -11,6 +11,21 @@ interface RuntimeConfig {
   isDesktop: boolean;
 }
 
+export interface RuntimeLoadStatus {
+  phase:
+    | 'resolving-runtime'
+    | 'waiting-for-backend'
+    | 'backend-ready'
+    | 'browser-ready';
+  apiBaseUrl: string;
+  attempt: number;
+  elapsedMs: number;
+}
+
+interface LoadRuntimeConfigOptions {
+  onStatus?: (status: RuntimeLoadStatus) => void;
+}
+
 declare global {
   interface Window {
     __TAURI_INTERNALS__?: unknown;
@@ -21,6 +36,9 @@ let runtimeConfig: RuntimeConfig = {
   apiBaseUrl: DEFAULT_API_BASE_URL,
   isDesktop: false,
 };
+let lastRuntimeStatus: RuntimeLoadStatus | null = null;
+let runtimeLoadPromise: Promise<RuntimeConfig> | null = null;
+const runtimeStatusListeners = new Set<(status: RuntimeLoadStatus) => void>();
 
 const detectLocale = () => {
   const storedLocale = localStorage.getItem(LOCALE_KEY);
@@ -37,11 +55,26 @@ const isDesktopRuntime = () =>
 const delay = (ms: number) =>
   new Promise((resolve) => window.setTimeout(resolve, ms));
 
+const emitRuntimeStatus = (status: RuntimeLoadStatus) => {
+  lastRuntimeStatus = status;
+  runtimeStatusListeners.forEach((listener) => listener(status));
+};
+
 const waitForBackend = async (apiBaseUrl: string) => {
   const deadline = Date.now() + BACKEND_STARTUP_TIMEOUT_MS;
   let lastError: unknown = null;
+  let attempt = 0;
+  const startTime = Date.now();
 
   while (Date.now() < deadline) {
+    attempt += 1;
+    emitRuntimeStatus({
+      phase: 'waiting-for-backend',
+      apiBaseUrl,
+      attempt,
+      elapsedMs: Date.now() - startTime,
+    });
+
     const controller = new AbortController();
     const timeoutId = window.setTimeout(
       () => controller.abort(),
@@ -56,6 +89,12 @@ const waitForBackend = async (apiBaseUrl: string) => {
 
       if (response.ok) {
         window.clearTimeout(timeoutId);
+        emitRuntimeStatus({
+          phase: 'backend-ready',
+          apiBaseUrl,
+          attempt,
+          elapsedMs: Date.now() - startTime,
+        });
         return;
       }
 
@@ -82,21 +121,61 @@ const waitForBackend = async (apiBaseUrl: string) => {
   );
 };
 
-export const loadRuntimeConfig = async () => {
-  if (!isDesktopRuntime()) {
-    runtimeConfig = {
-      apiBaseUrl: DEFAULT_API_BASE_URL,
-      isDesktop: false,
-    };
-    return runtimeConfig;
+export const loadRuntimeConfig = async (
+  options: LoadRuntimeConfigOptions = {}
+) => {
+  const { onStatus } = options;
+
+  if (onStatus) {
+    runtimeStatusListeners.add(onStatus);
+    if (lastRuntimeStatus) {
+      onStatus(lastRuntimeStatus);
+    }
   }
 
-  const { invoke } = await import('@tauri-apps/api/core');
-  const tauriConfig = await invoke<RuntimeConfig>('get_runtime_config');
-  await waitForBackend(tauriConfig.apiBaseUrl);
-  runtimeConfig = tauriConfig;
+  if (!runtimeLoadPromise) {
+    runtimeLoadPromise = (async () => {
+      if (!isDesktopRuntime()) {
+        runtimeConfig = {
+          apiBaseUrl: DEFAULT_API_BASE_URL,
+          isDesktop: false,
+        };
+        emitRuntimeStatus({
+          phase: 'browser-ready',
+          apiBaseUrl: runtimeConfig.apiBaseUrl,
+          attempt: 0,
+          elapsedMs: 0,
+        });
+        return runtimeConfig;
+      }
 
-  return runtimeConfig;
+      emitRuntimeStatus({
+        phase: 'resolving-runtime',
+        apiBaseUrl: DEFAULT_API_BASE_URL,
+        attempt: 0,
+        elapsedMs: 0,
+      });
+
+      const { invoke } = await import('@tauri-apps/api/core');
+      const tauriConfig = await invoke<RuntimeConfig>('get_runtime_config');
+      await waitForBackend(tauriConfig.apiBaseUrl);
+      runtimeConfig = tauriConfig;
+
+      return runtimeConfig;
+    })().catch((error) => {
+      runtimeLoadPromise = null;
+      throw error;
+    });
+  }
+
+  try {
+    return await runtimeLoadPromise;
+  } finally {
+    if (onStatus) {
+      runtimeStatusListeners.delete(onStatus);
+    }
+  }
 };
 
+export const ensureRuntimeReady = () => loadRuntimeConfig();
 export const getRuntimeConfig = () => runtimeConfig;
