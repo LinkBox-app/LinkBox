@@ -39,7 +39,7 @@ sudo xattr -cr /Applications/LinkBox.app/
 - Desktop shell: Tauri v2
 - Backend: FastAPI, SQLAlchemy, Pydantic
 - AI integration: OpenAI-compatible API via `openai`, `langchain`, and `langchain-openai`
-- Database: SQLite by default, MySQL supported through environment variables
+- Database: SQLite
 
 ## Project Structure
 

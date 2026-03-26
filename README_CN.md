@@ -39,7 +39,7 @@ sudo xattr -cr /Applications/LinkBox.app/
 - 桌面壳：Tauri v2
 - 后端：FastAPI、SQLAlchemy、Pydantic
 - AI 集成：兼容 OpenAI 风格接口，使用 `openai`、`langchain`、`langchain-openai`
-- 数据库：默认 SQLite，也支持通过环境变量切换到 MySQL
+- 数据库：SQLite
 
 ## 目录结构
 

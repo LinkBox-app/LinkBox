@@ -8,22 +8,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     # 配置文件的模型，字段名与环境变量名对应
 
-    # 应用模式
-    SINGLE_USER_MODE: bool = True
+    # 单用户模式
     DEFAULT_USERNAME: str = "local"
 
     # 数据库配置
     DATABASE_URL: Optional[str] = "sqlite:///./linkbox.db"
-    MYSQL_HOST: Optional[str] = None
-    MYSQL_PORT: Optional[int] = None
-    MYSQL_USER: Optional[str] = None
-    MYSQL_PASSWORD: Optional[str] = None
-    MYSQL_DB: str = "linkbox"
-
-    # JWT 配置
-    JWT_SECRET_KEY: str = "your-secret-key-change-in-production"
-    JWT_ALGORITHM: str = "HS256"
-    JWT_EXPIRE_MINUTES: int = 60 * 24  # 1天过期
 
     # AI 配置
     AI_BASE_URL: str = "https://api.siliconflow.cn/v1"
@@ -57,22 +46,9 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
-        """获取当前使用的数据库连接串。"""
+        """获取当前使用的 SQLite 连接串。"""
         if self.DATABASE_URL:
             return self._resolve_sqlite_url(self.DATABASE_URL)
-
-        if all(
-            [
-                self.MYSQL_HOST,
-                self.MYSQL_PORT,
-                self.MYSQL_USER,
-                self.MYSQL_PASSWORD,
-            ]
-        ):
-            return (
-                f"mysql+pymysql://{self.MYSQL_USER}:{self.MYSQL_PASSWORD}"
-                f"@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DB}?charset=utf8mb4"
-            )
 
         return self._resolve_sqlite_url("sqlite:///./linkbox.db")
 

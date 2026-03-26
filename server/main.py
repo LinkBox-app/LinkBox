@@ -33,11 +33,7 @@ from database import SessionLocal, create_tables
 
 # 导入全局异常处理
 from errors import (
-    AuthenticationError,
-    AuthorizationError,
     BusinessError,
-    authentication_exception_handler,
-    authorization_exception_handler,
     business_exception_handler,
     general_exception_handler,
     validation_exception_handler,
@@ -65,10 +61,9 @@ async def lifespan(app: FastAPI):
         create_tables()
         logger.info("数据库表创建成功")
 
-        if settings.SINGLE_USER_MODE:
-            with SessionLocal() as db:
-                default_user = ensure_single_user(db)
-                logger.info("单用户模式已加载用户: %s", default_user.username)
+        with SessionLocal() as db:
+            default_user = ensure_single_user(db)
+            logger.info("本地用户已加载: %s", default_user.username)
     except Exception as e:
         logger.error(f"数据库表创建失败: {e}")
         raise
@@ -90,15 +85,12 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # 允许的前端地址
-    # 当前前端使用 Bearer Token，不依赖 cookie；与 "*" 组合时必须关闭 credentials。
     allow_credentials=False,
     allow_methods=["*"],  # 允许所有HTTP方法
     allow_headers=["*"],  # 允许所有HTTP头
 )
 
 # 注册全局异常处理器
-app.add_exception_handler(AuthenticationError, authentication_exception_handler)
-app.add_exception_handler(AuthorizationError, authorization_exception_handler)
 app.add_exception_handler(BusinessError, business_exception_handler)
 app.add_exception_handler(ValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, general_exception_handler)
@@ -122,7 +114,7 @@ async def health_check():
     """健康检查"""
     return {
         "status": "healthy",
-        "mode": "single-user" if settings.SINGLE_USER_MODE else "multi-user",
+        "mode": "single-user",
     }
 
 

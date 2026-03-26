@@ -247,10 +247,7 @@ const Home: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center dot-pattern"
         style={{ backgroundColor: 'rgba(255, 239, 215, 1)' }}>
         <div className="text-center">
-          <LoadingDots 
-            text={t('home.initializing')}
-            className="terminal-text text-xl" 
-          />
+          <div className="terminal-text text-xl">{t('home.initializing')}</div>
         </div>
       </div>
     );

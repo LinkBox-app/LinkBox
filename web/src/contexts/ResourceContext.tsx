@@ -29,7 +29,6 @@ import type {
   ResourceUpdate,
 } from '../api/types/resource.types';
 import toast from '../utils/toast';
-import { useAuth } from './AuthContext';
 
 interface PaginationState {
   total: number;
@@ -71,7 +70,6 @@ const DEFAULT_PAGINATION: PaginationState = {
 const ResourceContext = createContext<ResourceContextValue | undefined>(undefined);
 
 export const ResourceProvider = ({ children }: { children: ReactNode }) => {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [tags, setTags] = useState<TagResponse[]>([]);
   const [resourcesResponse, setResourcesResponse] = useState<ResourceListResponse | null>(null);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -82,10 +80,6 @@ export const ResourceProvider = ({ children }: { children: ReactNode }) => {
   const resourcesRequestIdRef = useRef(0);
 
   const loadTags = useCallback(async () => {
-    if (authLoading || !isAuthenticated) {
-      return [] as TagResponse[];
-    }
-
     const requestId = ++tagsRequestIdRef.current;
 
     try {
@@ -109,14 +103,10 @@ export const ResourceProvider = ({ children }: { children: ReactNode }) => {
         setIsLoadingTags(false);
       }
     }
-  }, [authLoading, isAuthenticated]);
+  }, []);
 
   const loadResources = useCallback(
     async (tag: string | null, page: number) => {
-      if (authLoading || !isAuthenticated) {
-        return null;
-      }
-
       const requestId = ++resourcesRequestIdRef.current;
 
       try {
@@ -156,7 +146,7 @@ export const ResourceProvider = ({ children }: { children: ReactNode }) => {
         }
       }
     },
-    [authLoading, isAuthenticated]
+    []
   );
 
   const syncAfterMutation = useCallback(
@@ -185,29 +175,12 @@ export const ResourceProvider = ({ children }: { children: ReactNode }) => {
   );
 
   useEffect(() => {
-    if (authLoading) {
-      return;
-    }
-
-    if (!isAuthenticated) {
-      setTags([]);
-      setResourcesResponse(null);
-      setSelectedTag(null);
-      setCurrentPage(1);
-    }
-  }, [authLoading, isAuthenticated]);
+    void loadTags();
+  }, [loadTags]);
 
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      void loadTags();
-    }
-  }, [authLoading, isAuthenticated, loadTags]);
-
-  useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      void loadResources(selectedTag, currentPage);
-    }
-  }, [authLoading, currentPage, isAuthenticated, loadResources, selectedTag]);
+    void loadResources(selectedTag, currentPage);
+  }, [currentPage, loadResources, selectedTag]);
 
   useEffect(() => {
     if (!selectedTag) {
