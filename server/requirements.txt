@@ -22,7 +22,7 @@ langchain-openai==0.3.28
 langchain-text-splitters==0.3.8
 langsmith==0.4.8
 openai==1.97.1
-orjson==3.11.0
+orjson==3.11.6
 packaging==25.0
 pluggy==1.6.0
 pydantic==2.11.7
