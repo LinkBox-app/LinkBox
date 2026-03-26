@@ -6,9 +6,19 @@
 
 LinkBox is an AI-assisted bookmark manager packaged as a cross-platform desktop app with Tauri. It combines a React frontend, a FastAPI backend, and a bundled Python sidecar so the app can be distributed on macOS, Windows, and Linux.
 
+
+## Screenshots
+
+<p align="center">
+  <img src="./misc/img/home.png" alt="LinkBox home screen" width="48%" />
+  <img src="./misc/img/chatbot.png" alt="LinkBox AI chat screen" width="48%" />
+</p>
+
 ## Install 
 
-🍎MacOS:
+🍎MacOS:  
+
+open it before using this command.
 ```
 sudo xattr -cr /Applications/LinkBox.app/
 ```
@@ -21,6 +31,7 @@ sudo xattr -cr /Applications/LinkBox.app/
 - Run in single-user local mode by default
 - Ship as desktop bundles through Tauri
 - Switch the UI between Simplified Chinese and English
+
 
 ## Tech Stack
 

@@ -1,10 +1,17 @@
 <div align="center">
   <img src="./misc/img/icon.png" alt="LinkBox icon" width="160" />
   <h1>LinkBox</h1>
-  <p><a href="./README.md">English README</a> | 中文</p>
+  <p><a href="./README.md">English</a> | 中文</p>
 </div>
 
 LinkBox 是一个 AI 辅助的链接收藏工具，目前已经打包为基于 Tauri 的跨平台桌面应用。项目由 React 前端、FastAPI 后端和 Python sidecar 组成，可分发到 macOS、Windows 和 Linux。
+
+## 界面预览
+
+<p align="center">
+  <img src="./misc/img/home.png" alt="LinkBox 首页界面" width="48%" />
+  <img src="./misc/img/chatbot.png" alt="LinkBox AI 对话界面" width="48%" />
+</p>
 
 ## 功能特点
 
@@ -14,6 +21,17 @@ LinkBox 是一个 AI 辅助的链接收藏工具，目前已经打包为基于 T
 - 默认使用本地单用户模式
 - 通过 Tauri 生成桌面安装包
 - 前端支持简体中文和英文切换
+
+
+
+## 安装
+
+🍎MacOS:  
+
+打开软件前请先在终端执行命令
+```
+sudo xattr -cr /Applications/LinkBox.app/
+```
 
 ## 技术栈
 
